@@ -34,6 +34,5 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      # TODO: add -- -D warnings once existing clippy warnings are resolved
       - name: Clippy (CLI + all backends)
-        run: cargo clippy --features cli,full
+        run: cargo clippy --features cli,full -- -D warnings

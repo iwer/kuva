@@ -23,7 +23,7 @@
 
 ### Tests
 - [ ] New test file in `tests/` with ≥ basic render + SVG content + legend tests
-- [ ] `cargo test` — all existing tests still pass
+- [ ] `cargo test --features cli,full` — all existing tests still pass
 
 ### CLI (if applicable)
 - [ ] `src/bin/kuva/<name>.rs` — Args struct (with `/// doc comment`) + `run()`

@@ -54,7 +54,7 @@ Work through every item below before opening a PR. Each area is listed in the or
 ### Tests
 
 - [ ] **`tests/<name>_basic.rs`** (or `tests/<name>_svg.rs`) — integration tests that write SVGs to `test_outputs/`; at minimum: one basic render test, one test verifying a key SVG element is present, one test verifying the legend if applicable.
-- [ ] Run `cargo test` — all 196+ existing tests must still pass.
+- [ ] Run `cargo test --features cli,full` — all existing tests must still pass.
 
 ### CLI (if a `kuva <name>` subcommand is warranted)
 
@@ -78,7 +78,7 @@ Work through every item below before opening a PR. Each area is listed in the or
 
 ### Visual inspection
 
-- [ ] Run `cargo test` and open `test_outputs/` — visually inspect the new plot's SVGs and scan neighbouring plots for unexpected layout regressions (margins, label clipping, legend overlap).
+- [ ] Run `cargo test --features cli,full` and open `test_outputs/` — visually inspect the new plot's SVGs and scan neighbouring plots for unexpected layout regressions (margins, label clipping, legend overlap).
 - [ ] Run `bash scripts/smoke_tests.sh` and open `smoke_test_outputs/` — verify all 22+ existing CLI outputs still look correct.
 
 ### Housekeeping
@@ -129,9 +129,9 @@ cargo build --bin kuva                  # CLI binary SVG output
 cargo build --bin kuva --features png   # CLI + SVG + PNG output
 cargo build --bin kuva --features pdf   # CLI + SVG + PDF output
 cargo build --bin kuva --features all   # CLI + SVG + PNG + PDF output
-cargo test                               # all tests
-cargo test <test_name>                   # single test
-cargo test --test cli_basic              # CLI integration tests
+cargo test --features cli,full           # all tests
+cargo test --features cli,full <test_name>  # single test
+cargo test --test cli_basic --features cli,full  # CLI integration tests
 bash scripts/smoke_tests.sh              # CLI smoke tests (all 22+ subcommands)
 bash scripts/gen_docs.sh                 # regenerate docs SVG assets
 bash scripts/gen_terminal_docs.sh        # regenerate terminal output GIFs for docs
