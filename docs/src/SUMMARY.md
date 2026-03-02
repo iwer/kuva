@@ -39,6 +39,7 @@
 
 # Reference
 
+- [Figure (Multi-Plot)](./reference/figure.md)
 - [Layout & Axes](./reference/layout.md)
 - [Themes](./reference/themes.md)
 - [Color Palettes](./reference/palettes.md)
