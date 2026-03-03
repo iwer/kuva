@@ -275,13 +275,16 @@ fn add_scatter(scatter: &ScatterPlot, scene: &mut Scene, computed: &ComputedLayo
         let size = scatter.sizes.as_ref()
             .and_then(|s| s.get(i).copied())
             .unwrap_or(scatter.size);
+        let color = scatter.colors.as_ref()
+            .and_then(|c| c.get(i).map(|s| s.as_str()))
+            .unwrap_or(&scatter.color);
         draw_marker(
             scene,
             scatter.marker,
             computed.map_x(point.x),
             computed.map_y(point.y),
             size,
-            &scatter.color,
+            color,
         );
 
         // x error
@@ -1271,11 +1274,14 @@ fn add_strip_points(
 
 fn add_strip(strip: &StripPlot, scene: &mut Scene, computed: &ComputedLayout) {
     for (i, group) in strip.groups.iter().enumerate() {
+        let color = strip.group_colors.as_ref()
+            .and_then(|c| c.get(i).map(|s| s.as_str()))
+            .unwrap_or(&strip.color);
         add_strip_points(
             &group.values,
             (i + 1) as f64,
             &strip.style,
-            &strip.color,
+            color,
             strip.point_size,
             strip.seed.wrapping_add(i as u64),
             scene,

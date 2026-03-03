@@ -350,6 +350,37 @@ fn test_scatter_log_small_values() {
 }
 
 #[test]
+fn test_scatter_per_point_colors() {
+    let data: Vec<(f64, f64)> = vec![
+        (1.0, 1.0), (2.0, 2.0),
+        (3.0, 3.0), (4.0, 4.0),
+        (5.0, 5.0), (6.0, 6.0),
+    ];
+    let colors = vec!["red", "green", "blue", "red", "green", "blue"];
+
+    let scatter = ScatterPlot::new()
+        .with_data(data)
+        .with_color("black")
+        .with_colors(colors)
+        .with_size(6.0);
+
+    let plot = vec![Plot::Scatter(scatter)];
+    let layout = Layout::auto_from_plots(&plot)
+        .with_title("Per-Point Colors")
+        .with_x_label("X")
+        .with_y_label("Y");
+
+    let scene = render_multiple(plot, layout);
+    let svg = SvgBackend.render_scene(&scene);
+    std::fs::write("test_outputs/scatter_per_point_colors.svg", svg.clone()).unwrap();
+
+    assert!(svg.contains("<svg"));
+    assert!(svg.contains(r#"fill="red""#));
+    assert!(svg.contains(r#"fill="green""#));
+    assert!(svg.contains(r#"fill="blue""#));
+}
+
+#[test]
 fn test_scatter_log_narrow_range() {
     // Narrow range (< 3 decades) should show 2x and 5x sub-ticks
     let data: Vec<(f64, f64)> = vec![
