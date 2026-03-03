@@ -1,1 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="679" height="541" fill="black"><rect width="100%" height="100%" fill="white" /><line x1="65" y1="492" x2="665" y2="492" stroke="black" stroke-width="1" /><line x1="65" y1="42" x2="65" y2="492" stroke="black" stroke-width="1" /><line x1="190" y1="42" x2="190" y2="492" stroke="#ccc" stroke-width="1" /><line x1="315" y1="42" x2="315" y2="492" stroke="#ccc" stroke-width="1" /><line x1="440" y1="42" x2="440" y2="492" stroke="#ccc" stroke-width="1" /><line x1="565" y1="42" x2="565" y2="492" stroke="#ccc" stroke-width="1" /><line x1="65" y1="379.5" x2="665" y2="379.5" stroke="#ccc" stroke-width="1" /><line x1="65" y1="267" x2="665" y2="267" stroke="#ccc" stroke-width="1" /><line x1="65" y1="154.5" x2="665" y2="154.5" stroke="#ccc" stroke-width="1" /><line x1="65" y1="42" x2="665" y2="42" stroke="#ccc" stroke-width="1" /><line x1="65" y1="492" x2="65" y2="497" stroke="black" stroke-width="1" /><text x="65" y="507" font-size="10" text-anchor="middle">0</text><line x1="190" y1="492" x2="190" y2="497" stroke="black" stroke-width="1" /><text x="190" y="507" font-size="10" text-anchor="middle">2.5</text><line x1="315" y1="492" x2="315" y2="497" stroke="black" stroke-width="1" /><text x="315" y="507" font-size="10" text-anchor="middle">5</text><line x1="440" y1="492" x2="440" y2="497" stroke="black" stroke-width="1" /><text x="440" y="507" font-size="10" text-anchor="middle">7.5</text><line x1="565" y1="492" x2="565" y2="497" stroke="black" stroke-width="1" /><text x="565" y="507" font-size="10" text-anchor="middle">10</text><line x1="60" y1="492" x2="65" y2="492" stroke="black" stroke-width="1" /><text x="57" y="495.5" font-size="10" text-anchor="end">0</text><line x1="60" y1="379.5" x2="65" y2="379.5" stroke="black" stroke-width="1" /><text x="57" y="383" font-size="10" text-anchor="end">5</text><line x1="60" y1="267" x2="65" y2="267" stroke="black" stroke-width="1" /><text x="57" y="270.5" font-size="10" text-anchor="end">10</text><line x1="60" y1="154.5" x2="65" y2="154.5" stroke="black" stroke-width="1" /><text x="57" y="158" font-size="10" text-anchor="end">15</text><line x1="60" y1="42" x2="65" y2="42" stroke="black" stroke-width="1" /><text x="57" y="45.5" font-size="10" text-anchor="end">20</text><text x="339.5" y="534" font-size="14" text-anchor="middle">X</text><text x="14" y="270.5" font-size="14" text-anchor="middle" transform="rotate(-90,14,270.5)">Y</text><text x="339.5" y="21" font-size="16" text-anchor="middle">Confidence Band</text><path d="M 115 413.25 L 165 372.75 L 215 332.25 L 265 291.75 L 315 251.25000000000003 L 365 210.75 L 415 170.25 L 465 129.75 L 515 89.25000000000006 L 565 48.75 L 565 102.75 L 515 143.25 L 465 183.75 L 415 224.25 L 365 264.74999999999994 L 315 305.25 L 265 345.75 L 215 386.25 L 165 426.75 L 115 467.25 Z" stroke="none" stroke-width="0" fill="steelblue" fill-opacity="0.2" /><circle cx="115" cy="440.25" r="5" fill="steelblue" /><circle cx="165" cy="399.75" r="5" fill="steelblue" /><circle cx="215" cy="359.25" r="5" fill="steelblue" /><circle cx="265" cy="318.75" r="5" fill="steelblue" /><circle cx="315" cy="278.25" r="5" fill="steelblue" /><circle cx="365" cy="237.74999999999997" r="5" fill="steelblue" /><circle cx="415" cy="197.25" r="5" fill="steelblue" /><circle cx="465" cy="156.75" r="5" fill="steelblue" /><circle cx="515" cy="116.25" r="5" fill="steelblue" /><circle cx="565" cy="75.75" r="5" fill="steelblue" /></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="679" height="541" fill="black">
+<rect width="100%" height="100%" fill="white" />
+<line x1="65" y1="492" x2="665" y2="492" stroke="black" stroke-width="1" />
+<line x1="65" y1="42" x2="65" y2="492" stroke="black" stroke-width="1" />
+<line x1="190" y1="42" x2="190" y2="492" stroke="#ccc" stroke-width="1" />
+<line x1="315" y1="42" x2="315" y2="492" stroke="#ccc" stroke-width="1" />
+<line x1="440" y1="42" x2="440" y2="492" stroke="#ccc" stroke-width="1" />
+<line x1="565" y1="42" x2="565" y2="492" stroke="#ccc" stroke-width="1" />
+<line x1="65" y1="379.5" x2="665" y2="379.5" stroke="#ccc" stroke-width="1" />
+<line x1="65" y1="267" x2="665" y2="267" stroke="#ccc" stroke-width="1" />
+<line x1="65" y1="154.5" x2="665" y2="154.5" stroke="#ccc" stroke-width="1" />
+<line x1="65" y1="42" x2="665" y2="42" stroke="#ccc" stroke-width="1" />
+<line x1="65" y1="492" x2="65" y2="497" stroke="black" stroke-width="1" />
+<text x="65" y="507" font-size="10" text-anchor="middle">0</text>
+<line x1="190" y1="492" x2="190" y2="497" stroke="black" stroke-width="1" />
+<text x="190" y="507" font-size="10" text-anchor="middle">2.5</text>
+<line x1="315" y1="492" x2="315" y2="497" stroke="black" stroke-width="1" />
+<text x="315" y="507" font-size="10" text-anchor="middle">5</text>
+<line x1="440" y1="492" x2="440" y2="497" stroke="black" stroke-width="1" />
+<text x="440" y="507" font-size="10" text-anchor="middle">7.5</text>
+<line x1="565" y1="492" x2="565" y2="497" stroke="black" stroke-width="1" />
+<text x="565" y="507" font-size="10" text-anchor="middle">10</text>
+<line x1="60" y1="492" x2="65" y2="492" stroke="black" stroke-width="1" />
+<text x="57" y="495.5" font-size="10" text-anchor="end">0</text>
+<line x1="60" y1="379.5" x2="65" y2="379.5" stroke="black" stroke-width="1" />
+<text x="57" y="383" font-size="10" text-anchor="end">5</text>
+<line x1="60" y1="267" x2="65" y2="267" stroke="black" stroke-width="1" />
+<text x="57" y="270.5" font-size="10" text-anchor="end">10</text>
+<line x1="60" y1="154.5" x2="65" y2="154.5" stroke="black" stroke-width="1" />
+<text x="57" y="158" font-size="10" text-anchor="end">15</text>
+<line x1="60" y1="42" x2="65" y2="42" stroke="black" stroke-width="1" />
+<text x="57" y="45.5" font-size="10" text-anchor="end">20</text>
+<text x="339.5" y="534" font-size="14" text-anchor="middle">X</text>
+<text x="14" y="270.5" font-size="14" text-anchor="middle" transform="rotate(-90,14,270.5)">Y</text>
+<text x="339.5" y="21" font-size="16" text-anchor="middle">Confidence Band</text>
+<path d="M 115 413.25 L 165 372.75 L 215 332.25 L 265 291.75 L 315 251.25000000000003 L 365 210.75 L 415 170.25 L 465 129.75 L 515 89.25000000000006 L 565 48.75 L 565 102.75 L 515 143.25 L 465 183.75 L 415 224.25 L 365 264.74999999999994 L 315 305.25 L 265 345.75 L 215 386.25 L 165 426.75 L 115 467.25 Z" stroke="none" stroke-width="0" fill="steelblue" fill-opacity="0.2" />
+<circle cx="115" cy="440.25" r="5" fill="steelblue" />
+<circle cx="165" cy="399.75" r="5" fill="steelblue" />
+<circle cx="215" cy="359.25" r="5" fill="steelblue" />
+<circle cx="265" cy="318.75" r="5" fill="steelblue" />
+<circle cx="315" cy="278.25" r="5" fill="steelblue" />
+<circle cx="365" cy="237.74999999999997" r="5" fill="steelblue" />
+<circle cx="415" cy="197.25" r="5" fill="steelblue" />
+<circle cx="465" cy="156.75" r="5" fill="steelblue" />
+<circle cx="515" cy="116.25" r="5" fill="steelblue" />
+<circle cx="565" cy="75.75" r="5" fill="steelblue" />
+</svg>

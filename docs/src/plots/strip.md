@@ -217,6 +217,8 @@ let layout = Layout::auto_from_plots(&plots)
 let svg = SvgBackend.render_scene(&render_multiple(plots, layout));
 ```
 
+<img src="../assets/strip/group_colors.svg" alt="Strip plot with per-group colors" width="560">
+
 ---
 
 ## API reference

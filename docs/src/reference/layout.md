@@ -211,6 +211,8 @@ let layout = Layout::auto_from_plots(&plots)
     );
 ```
 
+<img src="../assets/layout/text_annotation.svg" alt="Text annotation with arrow" width="560">
+
 ### Reference line
 
 Draws a dashed line across the full plot area at a fixed x or y value.
@@ -236,6 +238,8 @@ let layout = Layout::auto_from_plots(&plots)
     );
 ```
 
+<img src="../assets/layout/reference_line.svg" alt="Reference lines" width="560">
+
 ### Shaded region
 
 Fills a horizontal or vertical band across the plot area.
@@ -259,7 +263,7 @@ let layout = Layout::auto_from_plots(&plots)
     );
 ```
 
-<img src="../assets/layout/annotations.svg" alt="Text annotation, reference lines, and shaded region" width="560">
+<img src="../assets/layout/shaded_region.svg" alt="Shaded regions" width="560">
 
 ---
 

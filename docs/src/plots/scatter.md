@@ -17,10 +17,15 @@ use kuva::render::plots::Plot;
 
 let data = vec![
     (0.5_f64, 1.2_f64),
+    (1.4, 3.1),
     (2.1, 2.4),
+    (3.3, 5.0),
     (4.0, 4.3),
+    (5.2, 6.8),
     (6.1, 6.0),
+    (7.0, 8.5),
     (8.4, 7.9),
+    (9.1, 9.8),
 ];
 
 let plot = ScatterPlot::new()
@@ -291,6 +296,8 @@ let layout = Layout::auto_from_plots(&plots)
 let svg = SvgBackend.render_scene(&render_multiple(plots, layout));
 ```
 
+<img src="../assets/scatter/per_point_colors.svg" alt="Scatter with per-point colors" width="560">
+
 ---
 
 ## Multiple series
@@ -322,6 +329,8 @@ let layout = Layout::auto_from_plots(&plots)
 
 let svg = SvgBackend.render_scene(&render_multiple(plots, layout));
 ```
+
+<img src="../assets/scatter/multiple_series.svg" alt="Multiple scatter series with legend" width="560">
 
 ---
 

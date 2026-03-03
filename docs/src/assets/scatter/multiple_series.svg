@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="770" height="541" fill="black">
+<rect width="100%" height="100%" fill="white" />
+<line x1="65" y1="492" x2="665" y2="492" stroke="black" stroke-width="1" />
+<line x1="65" y1="42" x2="65" y2="492" stroke="black" stroke-width="1" />
+<line x1="165" y1="42" x2="165" y2="492" stroke="#ccc" stroke-width="1" />
+<line x1="265" y1="42" x2="265" y2="492" stroke="#ccc" stroke-width="1" />
+<line x1="365" y1="42" x2="365" y2="492" stroke="#ccc" stroke-width="1" />
+<line x1="465" y1="42" x2="465" y2="492" stroke="#ccc" stroke-width="1" />
+<line x1="565" y1="42" x2="565" y2="492" stroke="#ccc" stroke-width="1" />
+<line x1="665" y1="42" x2="665" y2="492" stroke="#ccc" stroke-width="1" />
+<line x1="65" y1="379.5" x2="665" y2="379.5" stroke="#ccc" stroke-width="1" />
+<line x1="65" y1="267" x2="665" y2="267" stroke="#ccc" stroke-width="1" />
+<line x1="65" y1="154.5" x2="665" y2="154.5" stroke="#ccc" stroke-width="1" />
+<line x1="65" y1="42" x2="665" y2="42" stroke="#ccc" stroke-width="1" />
+<line x1="65" y1="492" x2="65" y2="497" stroke="black" stroke-width="1" />
+<text x="65" y="507" font-size="10" text-anchor="middle">0</text>
+<line x1="165" y1="492" x2="165" y2="497" stroke="black" stroke-width="1" />
+<text x="165" y="507" font-size="10" text-anchor="middle">1</text>
+<line x1="265" y1="492" x2="265" y2="497" stroke="black" stroke-width="1" />
+<text x="265" y="507" font-size="10" text-anchor="middle">2</text>
+<line x1="365" y1="492" x2="365" y2="497" stroke="black" stroke-width="1" />
+<text x="365" y="507" font-size="10" text-anchor="middle">3</text>
+<line x1="465" y1="492" x2="465" y2="497" stroke="black" stroke-width="1" />
+<text x="465" y="507" font-size="10" text-anchor="middle">4</text>
+<line x1="565" y1="492" x2="565" y2="497" stroke="black" stroke-width="1" />
+<text x="565" y="507" font-size="10" text-anchor="middle">5</text>
+<line x1="665" y1="492" x2="665" y2="497" stroke="black" stroke-width="1" />
+<text x="665" y="507" font-size="10" text-anchor="middle">6</text>
+<line x1="60" y1="492" x2="65" y2="492" stroke="black" stroke-width="1" />
+<text x="57" y="495.5" font-size="10" text-anchor="end">0</text>
+<line x1="60" y1="379.5" x2="65" y2="379.5" stroke="black" stroke-width="1" />
+<text x="57" y="383" font-size="10" text-anchor="end">2</text>
+<line x1="60" y1="267" x2="65" y2="267" stroke="black" stroke-width="1" />
+<text x="57" y="270.5" font-size="10" text-anchor="end">4</text>
+<line x1="60" y1="154.5" x2="65" y2="154.5" stroke="black" stroke-width="1" />
+<text x="57" y="158" font-size="10" text-anchor="end">6</text>
+<line x1="60" y1="42" x2="65" y2="42" stroke="black" stroke-width="1" />
+<text x="57" y="45.5" font-size="10" text-anchor="end">8</text>
+<text x="385" y="534" font-size="14" text-anchor="middle">X</text>
+<text x="14" y="270.5" font-size="14" text-anchor="middle" transform="rotate(-90,14,270.5)">Y</text>
+<text x="385" y="21" font-size="16" text-anchor="middle">Two Series</text>
+<circle cx="165" cy="379.5" r="5" fill="steelblue" />
+<circle cx="365" cy="267" r="5" fill="steelblue" />
+<circle cx="565" cy="295.125" r="5" fill="steelblue" />
+<circle cx="165" cy="210.75" r="5" fill="crimson" />
+<circle cx="365" cy="126.375" r="5" fill="crimson" />
+<circle cx="565" cy="98.25" r="5" fill="crimson" />
+<rect x="670" y="32" width="91" height="56" fill="white" />
+<rect x="670" y="32" width="91" height="56" fill="none" stroke="black" stroke-width="1" />
+<text x="700" y="47" font-size="12" text-anchor="start">Series A</text>
+<circle cx="686" cy="43" r="5" fill="steelblue" />
+<text x="700" y="65" font-size="12" text-anchor="start">Series B</text>
+<circle cx="686" cy="61" r="5" fill="crimson" />
+</svg>
