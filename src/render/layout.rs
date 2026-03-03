@@ -149,6 +149,22 @@ pub struct Layout {
     /// `line_height` is quantised to an integer multiple of the cell height so
     /// that every legend entry lands on its own terminal row with no gaps.
     pub term_rows: Option<u32>,
+    /// Override the lower bound of the x-axis after auto-ranging.
+    pub x_axis_min: Option<f64>,
+    /// Override the upper bound of the x-axis after auto-ranging.
+    pub x_axis_max: Option<f64>,
+    /// Override the lower bound of the y-axis after auto-ranging.
+    pub y_axis_min: Option<f64>,
+    /// Override the upper bound of the y-axis after auto-ranging.
+    pub y_axis_max: Option<f64>,
+    /// Explicit major tick step for the x-axis.  Skips auto computation when set.
+    pub x_tick_step: Option<f64>,
+    /// Explicit major tick step for the y-axis.  Skips auto computation when set.
+    pub y_tick_step: Option<f64>,
+    /// Sub-intervals between major ticks (e.g. 5 → 4 minor marks per gap).
+    pub minor_ticks: Option<u32>,
+    /// Draw faint gridlines at minor tick positions (requires `minor_ticks`).
+    pub show_minor_grid: bool,
 }
 
 impl Layout {
@@ -200,6 +216,14 @@ impl Layout {
             clamp_y_axis: false,
             x_bin_width: None,
             term_rows: None,
+            x_axis_min: None,
+            x_axis_max: None,
+            y_axis_min: None,
+            y_axis_max: None,
+            x_tick_step: None,
+            y_tick_step: None,
+            minor_ticks: None,
+            show_minor_grid: false,
         }
     }
 
@@ -775,6 +799,15 @@ impl Layout {
         self
     }
 
+    pub fn with_x_axis_min(mut self, v: f64) -> Self { self.x_axis_min = Some(v); self }
+    pub fn with_x_axis_max(mut self, v: f64) -> Self { self.x_axis_max = Some(v); self }
+    pub fn with_y_axis_min(mut self, v: f64) -> Self { self.y_axis_min = Some(v); self }
+    pub fn with_y_axis_max(mut self, v: f64) -> Self { self.y_axis_max = Some(v); self }
+    pub fn with_x_tick_step(mut self, s: f64) -> Self { self.x_tick_step = Some(s); self }
+    pub fn with_y_tick_step(mut self, s: f64) -> Self { self.y_tick_step = Some(s); self }
+    pub fn with_minor_ticks(mut self, n: u32) -> Self { self.minor_ticks = Some(n); self }
+    pub fn with_show_minor_grid(mut self, v: bool) -> Self { self.show_minor_grid = v; self }
+
     /// Convenience: auto-range both axes from separate plot lists.
     pub fn auto_from_twin_y_plots(primary: &[Plot], secondary: &[Plot]) -> Self {
         Layout::auto_from_plots(primary).with_y2_auto(secondary)
@@ -817,6 +850,14 @@ pub struct ComputedLayout {
     /// Pixel spacing between legend entries, quantised to a whole terminal-row
     /// multiple when `term_rows` is set.  Always >= 18.0 (the SVG default).
     pub legend_line_height: f64,
+    /// Explicit major tick step for the x-axis (None = auto).
+    pub x_tick_step: Option<f64>,
+    /// Explicit major tick step for the y-axis (None = auto).
+    pub y_tick_step: Option<f64>,
+    /// Sub-intervals between major ticks for minor tick marks.
+    pub minor_ticks: Option<u32>,
+    /// Draw faint gridlines at minor tick positions.
+    pub show_minor_grid: bool,
 }
 
 impl ComputedLayout {
@@ -913,6 +954,12 @@ impl ComputedLayout {
             render_utils::auto_nice_range(layout.y_range.0, layout.y_range.1, y_ticks)
         };
 
+        // Apply explicit axis-range overrides (after auto-ranging).
+        let x_min = layout.x_axis_min.unwrap_or(x_min);
+        let x_max = layout.x_axis_max.unwrap_or(x_max);
+        let y_min = layout.y_axis_min.unwrap_or(y_min);
+        let y_max = layout.y_axis_max.unwrap_or(y_max);
+
         let y2_range = if let Some((ylo, yhi)) = layout.y2_range {
             if layout.log_y2 {
                 let (ylo, yhi) = layout.data_y2_range.unwrap_or((ylo, yhi));
@@ -966,6 +1013,10 @@ impl ComputedLayout {
             y2_axis_width,
             x_tick_rotate: layout.x_tick_rotate,
             legend_line_height,
+            x_tick_step: layout.x_tick_step,
+            y_tick_step: layout.y_tick_step,
+            minor_ticks: layout.minor_ticks,
+            show_minor_grid: layout.show_minor_grid,
         }
     }
 

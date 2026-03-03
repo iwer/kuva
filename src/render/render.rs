@@ -4579,9 +4579,9 @@ fn add_phylo_tree(tree: &PhyloTree, scene: &mut Scene, computed: &ComputedLayout
                     TreeOrientation::Right =>
                         (px[leaf] - 6.0, py[leaf], TextAnchor::End, None),
                     TreeOrientation::Top =>
-                        (px[leaf] + 4.0, py[leaf] + 14.0, TextAnchor::Start, Some(90.0)),
+                        (px[leaf], py[leaf] + 6.0, TextAnchor::Start, Some(90.0)),
                     TreeOrientation::Bottom =>
-                        (px[leaf] + 4.0, py[leaf] - 5.0, TextAnchor::Start, Some(90.0)),
+                        (px[leaf], py[leaf] - 6.0, TextAnchor::End, Some(90.0)),
                 },
             };
             scene.elements.push(Primitive::Text {
