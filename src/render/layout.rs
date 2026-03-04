@@ -7,6 +7,12 @@ use crate::render::palette::Palette;
 use crate::plot::legend::LegendPosition;
 use crate::render::datetime::DateTimeAxis;
 
+/// Default font-family stack applied when the user has not specified a font
+/// and no theme font is set.  Prefers DejaVu Sans (pre-installed on most Linux
+/// systems including HPC clusters), falls back through common sans-serif fonts.
+pub(crate) const DEFAULT_FONT_FAMILY: &str =
+    "DejaVu Sans, Liberation Sans, Arial, sans-serif";
+
 /// Controls how tick labels are formatted on an axis.
 pub enum TickFormat {
     /// Smart default: integers as "5", minimal decimals, scientific notation for extremes.
@@ -195,9 +201,9 @@ impl Layout {
             suppress_x_ticks: false,
             suppress_y_ticks: false,
             font_family: None,
-            title_size: 16,
+            title_size: 18,
             label_size: 14,
-            tick_size: 10,
+            tick_size: 12,
             body_size: 12,
             theme: Theme::default(),
             palette: None,
@@ -999,7 +1005,9 @@ impl ComputedLayout {
             legend_width: layout.legend_width,
             log_x: layout.log_x,
             log_y: layout.log_y,
-            font_family: layout.font_family.clone().or(layout.theme.font_family.clone()),
+            font_family: layout.font_family.clone()
+                .or(layout.theme.font_family.clone())
+                .or(Some(DEFAULT_FONT_FAMILY.to_string())),
             title_size: layout.title_size,
             label_size: layout.label_size,
             tick_size: layout.tick_size,
