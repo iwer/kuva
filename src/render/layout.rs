@@ -4,7 +4,7 @@ use crate::render::plots::Plot;
 use crate::render::annotations::{TextAnnotation, ReferenceLine, ShadedRegion};
 use crate::render::theme::Theme;
 use crate::render::palette::Palette;
-use crate::plot::legend::{LegendEntry, LegendPosition};
+use crate::plot::legend::{LegendEntry, LegendGroup, LegendPosition};
 use crate::render::datetime::DateTimeAxis;
 
 /// Default font-family stack applied when the user has not specified a font
@@ -113,9 +113,12 @@ pub struct Layout {
     pub legend_width: f64,
     /// Manual legend entries. When `Some`, replaces auto-collection from plot data.
     pub legend_entries: Option<Vec<LegendEntry>>,
-    /// Absolute SVG pixel coordinate for legend top-left. When `Some`, the legend
-    /// floats at this position and no right-margin space is reserved.
-    pub legend_xy: Option<(f64, f64)>,
+    /// Optional title rendered as a bold header above legend entries.
+    pub legend_title: Option<String>,
+    /// Grouped legend sections. When `Some`, takes priority over `legend_entries`.
+    pub legend_groups: Option<Vec<LegendGroup>>,
+    /// Draw background + border rects around the legend. Default: true.
+    pub legend_box: bool,
     pub log_x: bool,
     pub log_y: bool,
     pub annotations: Vec<TextAnnotation>,
@@ -205,10 +208,12 @@ impl Layout {
             y_categories: None,
             show_legend: false,
             show_colorbar: false,
-            legend_position: LegendPosition::TopRight,
+            legend_position: LegendPosition::OutsideRightTop,
             legend_width: 120.0,
             legend_entries: None,
-            legend_xy: None,
+            legend_title: None,
+            legend_groups: None,
+            legend_box: true,
             log_x: false,
             log_y: false,
             annotations: Vec::new(),
@@ -681,9 +686,39 @@ impl Layout {
         self
     }
 
-    /// Place legend at absolute SVG pixel coordinates; no right-margin reserved.
+    /// Place legend at absolute SVG canvas pixel coordinates; no right-margin reserved.
     pub fn with_legend_at(mut self, x: f64, y: f64) -> Self {
-        self.legend_xy = Some((x, y));
+        self.legend_position = LegendPosition::Custom(x, y);
+        self.show_legend = true;
+        self
+    }
+
+    /// Place the legend at data-space coordinates, mapped through `map_x`/`map_y` at render time.
+    pub fn with_legend_at_data(mut self, x: f64, y: f64) -> Self {
+        self.legend_position = LegendPosition::DataCoords(x, y);
+        self.show_legend = true;
+        self
+    }
+
+    /// Show or hide the legend background and border box (default: `true`).
+    pub fn with_legend_box(mut self, show: bool) -> Self {
+        self.legend_box = show;
+        self
+    }
+
+    /// Set a bold title row above legend entries.
+    pub fn with_legend_title<S: Into<String>>(mut self, title: S) -> Self {
+        self.legend_title = Some(title.into());
+        self
+    }
+
+    /// Add a labelled group of legend entries. Multiple calls stack; takes priority over
+    /// `with_legend_entries`.
+    pub fn with_legend_group<S: Into<String>>(mut self, title: S, entries: Vec<LegendEntry>) -> Self {
+        self.legend_groups.get_or_insert_with(Vec::new).push(LegendGroup {
+            title: title.into(),
+            entries,
+        });
         self.show_legend = true;
         self
     }
@@ -973,7 +1008,7 @@ impl ComputedLayout {
         let tick_size = layout.tick_size as f64;
 
         // Top: title height + padding, or small padding if no title
-        let margin_top = if layout.title.is_some() {
+        let mut margin_top = if layout.title.is_some() {
             title_size + label_size + 12.0
         } else {
             10.0
@@ -982,7 +1017,7 @@ impl ComputedLayout {
         // When ticks are suppressed AND no rotation is requested (e.g. pure numeric axes),
         // keep only minimal space. When rotation IS set (e.g. Manhattan chromosome labels drawn
         // by the renderer itself), compute space for the rotated custom labels.
-        let margin_bottom = if layout.suppress_x_ticks && layout.x_tick_rotate.is_none() {
+        let mut margin_bottom = if layout.suppress_x_ticks && layout.x_tick_rotate.is_none() {
             tick_size + 15.0
         } else if let Some(angle) = layout.x_tick_rotate {
             // Rotated labels extend below their anchor point by label_px * sin(|angle|).
@@ -1000,7 +1035,7 @@ impl ComputedLayout {
         // Left: axis label + y tick label text width + gap to axis.
         // For category y-axes (e.g. DotPlot) the tick labels can be long strings;
         // compute width from the longest category name so they stay on-canvas.
-        let margin_left = if layout.suppress_y_ticks {
+        let mut margin_left = if layout.suppress_y_ticks {
             10.0
         } else {
             let char_w = tick_size * 0.6;
@@ -1018,8 +1053,41 @@ impl ComputedLayout {
             0.0
         };
         margin_right += y2_axis_width;
-        if layout.show_legend && layout.legend_xy.is_none() {
-            margin_right += layout.legend_width;
+
+        if layout.show_legend {
+            // Estimate legend height for OutsideTop/Bottom margin adjustments.
+            let legend_h_estimate = if let Some(ref groups) = layout.legend_groups {
+                let n = groups.iter().map(|g| g.entries.len() + 1).sum::<usize>();
+                n as f64 * 18.0 + 20.0
+            } else if let Some(ref entries) = layout.legend_entries {
+                entries.len() as f64 * 18.0 + 20.0
+            } else {
+                80.0 // conservative default for auto-collected entries
+            };
+            match layout.legend_position {
+                LegendPosition::OutsideRightTop
+                | LegendPosition::OutsideRightMiddle
+                | LegendPosition::OutsideRightBottom => {
+                    margin_right += layout.legend_width;
+                }
+                LegendPosition::OutsideLeftTop
+                | LegendPosition::OutsideLeftMiddle
+                | LegendPosition::OutsideLeftBottom => {
+                    margin_left += layout.legend_width;
+                }
+                LegendPosition::OutsideTopLeft
+                | LegendPosition::OutsideTopCenter
+                | LegendPosition::OutsideTopRight => {
+                    margin_top += legend_h_estimate;
+                }
+                LegendPosition::OutsideBottomLeft
+                | LegendPosition::OutsideBottomCenter
+                | LegendPosition::OutsideBottomRight => {
+                    margin_bottom += legend_h_estimate;
+                }
+                // Inside*, Custom, DataCoords: overlay or user controls — no margin change
+                _ => {}
+            }
         }
         if layout.show_colorbar {
             margin_right += 85.0; // 20px bar + 50px labels + 15px gap

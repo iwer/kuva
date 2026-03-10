@@ -93,7 +93,7 @@ impl StackedAreaPlot {
             stroke_width: 1.5,
             show_strokes: true,
             normalized: false,
-            legend_position: LegendPosition::TopRight,
+            legend_position: LegendPosition::OutsideRightTop,
         }
     }
 
@@ -213,15 +213,16 @@ impl StackedAreaPlot {
 
     /// Set the corner of the plot area where the legend box is placed.
     ///
-    /// The four variants are `TopRight` (default), `TopLeft`, `BottomRight`,
-    /// and `BottomLeft` from [`LegendPosition`].
+    /// Any [`LegendPosition`] variant is accepted. Common choices for stacked-area
+    /// plots: `InsideBottomLeft`, `InsideTopRight` (default for inside placement),
+    /// `OutsideRightTop` (default overall).
     ///
     /// ```rust,no_run
     /// use kuva::plot::{StackedAreaPlot, LegendPosition};
     /// let sa = StackedAreaPlot::new()
     ///     .with_x([1.0, 2.0, 3.0])
     ///     .with_series([10.0, 20.0, 15.0]).with_legend("A")
-    ///     .with_legend_position(LegendPosition::BottomLeft);
+    ///     .with_legend_position(LegendPosition::InsideBottomLeft);
     /// ```
     pub fn with_legend_position(mut self, pos: LegendPosition) -> Self {
         self.legend_position = pos;

@@ -127,7 +127,7 @@ fn test_twin_y_multiplot() {
 
     let layout = Layout::auto_from_twin_y_plots(&primary, &secondary)
         .with_title("rainfall and temperature twin y multiplot")
-        .with_legend_position(kuva::plot::LegendPosition::RightTop);
+        .with_legend_position(kuva::plot::LegendPosition::OutsideRightTop);
     let scene = render_twin_y(primary, secondary, layout);
     let svg = SvgBackend.render_scene(&scene);
     std::fs::write("test_outputs/twin_y_multiplot.svg", svg.clone()).unwrap();

@@ -36,7 +36,7 @@ use crate::plot::synteny::{SyntenyPlot, Strand};
 
 
 use crate::plot::Legend;
-use crate::plot::legend::{ColorBarInfo, LegendEntry, LegendPosition, LegendShape};
+use crate::plot::legend::{ColorBarInfo, LegendEntry, LegendGroup, LegendPosition, LegendShape};
 
 use crate::render::color::Color;
 
@@ -1560,112 +1560,174 @@ fn add_waterfall(waterfall: &WaterfallPlot, scene: &mut Scene, computed: &Comput
     }
 }
 
+fn render_legend_entry(entry: &LegendEntry, scene: &mut Scene, legend_x: f64, cur_y: f64, computed: &ComputedLayout) {
+    scene.add(Primitive::Text {
+        x: legend_x + 25.0,
+        y: cur_y + 5.0,
+        content: entry.label.clone(),
+        anchor: TextAnchor::Start,
+        size: computed.body_size,
+        rotate: None,
+        bold: false,
+    });
+    match entry.shape {
+        LegendShape::Rect => scene.add(Primitive::Rect {
+            x: legend_x + 5.0,
+            y: cur_y - 1.0,
+            width: 12.0,
+            height: 12.0,
+            fill: Color::from(&entry.color),
+            stroke: None,
+            stroke_width: None,
+            opacity: None,
+        }),
+        LegendShape::Line => scene.add(Primitive::Line {
+            x1: legend_x + 5.0,
+            y1: cur_y + 2.0,
+            x2: legend_x + 5.0 + 12.0,
+            y2: cur_y + 2.0,
+            stroke: Color::from(&entry.color),
+            stroke_width: 2.0,
+            stroke_dasharray: entry.dasharray.clone(),
+        }),
+        LegendShape::Circle => scene.add(Primitive::Circle {
+            cx: legend_x + 5.0 + 6.0,
+            cy: cur_y + 1.0,
+            r: 5.0,
+            fill: Color::from(&entry.color),
+        }),
+        LegendShape::Marker(marker) => {
+            draw_marker(scene, marker, legend_x + 5.0 + 6.0, cur_y + 1.0, 5.0, &entry.color);
+        }
+        LegendShape::CircleSize(r) => {
+            let swatch_half = 8.0;
+            let draw_r = r.min(swatch_half);
+            scene.add(Primitive::Circle {
+                cx: legend_x + 5.0 + 6.0,
+                cy: cur_y + 1.0,
+                r: draw_r,
+                fill: Color::from(&entry.color),
+            });
+        }
+    }
+}
+
 fn add_legend(legend: &Legend, scene: &mut Scene, computed: &ComputedLayout) {
     let theme = &computed.theme;
 
     let legend_width = computed.legend_width;
     let legend_padding = 10.0;
     let line_height = computed.legend_line_height;
-    let legend_height = legend.entries.len() as f64 * line_height + legend_padding * 2.0;
 
-    let right_x = computed.width - computed.margin_right + computed.y2_axis_width + 10.0;
-    let plot_top = computed.margin_top;
+    // Height depends on groups (each group adds a title row) + optional top title
+    let entry_rows = if let Some(ref groups) = legend.groups {
+        groups.iter().map(|g| g.entries.len() + 1).sum::<usize>()
+    } else {
+        legend.entries.len()
+    };
+    let title_rows = if legend.title.is_some() { 1 } else { 0 };
+    let legend_height = (entry_rows + title_rows) as f64 * line_height + legend_padding * 2.0;
+
+    let plot_left   = computed.margin_left;
+    let plot_right  = computed.width - computed.margin_right;
+    let plot_top    = computed.margin_top;
     let plot_bottom = computed.height - computed.margin_bottom;
+    let plot_cx     = (plot_left + plot_right) / 2.0;
+    let right_x     = computed.width - computed.margin_right + computed.y2_axis_width + 10.0;
+    let left_x      = 5.0;
+    let inset       = 8.0;
 
-    let (legend_x, mut legend_y) = match computed.legend_position {
-        LegendPosition::TopRight => {
-            (right_x, plot_top)
-        }
-        LegendPosition::BottomRight => {
-            (right_x, plot_bottom - legend_height)
-        }
-        LegendPosition::TopLeft => {
-            (legend_padding, plot_top)
-        }
-        LegendPosition::BottomLeft => {
-            (legend_padding, plot_bottom - legend_height)
-        }
-        LegendPosition::RightTop => (right_x, plot_top),
-        LegendPosition::RightMiddle => (right_x, (plot_top + plot_bottom) / 2.0 - legend_height / 2.0),
-        LegendPosition::RightBottom => (right_x, plot_bottom - legend_height),
+    let (legend_x, legend_y) = match computed.legend_position {
+        // Inside (overlay, inset from axes)
+        LegendPosition::InsideTopRight     => (plot_right - legend_width - inset, plot_top + inset),
+        LegendPosition::InsideTopLeft      => (plot_left + inset, plot_top + inset),
+        LegendPosition::InsideBottomRight  => (plot_right - legend_width - inset, plot_bottom - legend_height - inset),
+        LegendPosition::InsideBottomLeft   => (plot_left + inset, plot_bottom - legend_height - inset),
+        LegendPosition::InsideTopCenter    => (plot_cx - legend_width / 2.0, plot_top + inset),
+        LegendPosition::InsideBottomCenter => (plot_cx - legend_width / 2.0, plot_bottom - legend_height - inset),
+        // Outside Right
+        LegendPosition::OutsideRightTop    => (right_x, plot_top),
+        LegendPosition::OutsideRightMiddle => (right_x, (plot_top + plot_bottom) / 2.0 - legend_height / 2.0),
+        LegendPosition::OutsideRightBottom => (right_x, plot_bottom - legend_height),
+        // Outside Left
+        LegendPosition::OutsideLeftTop     => (left_x, plot_top),
+        LegendPosition::OutsideLeftMiddle  => (left_x, (plot_top + plot_bottom) / 2.0 - legend_height / 2.0),
+        LegendPosition::OutsideLeftBottom  => (left_x, plot_bottom - legend_height),
+        // Outside Top
+        LegendPosition::OutsideTopLeft     => (plot_left, legend_padding),
+        LegendPosition::OutsideTopCenter   => (plot_cx - legend_width / 2.0, legend_padding),
+        LegendPosition::OutsideTopRight    => (plot_right - legend_width, legend_padding),
+        // Outside Bottom
+        LegendPosition::OutsideBottomLeft   => (plot_left, computed.height - computed.margin_bottom + 10.0),
+        LegendPosition::OutsideBottomCenter => (plot_cx - legend_width / 2.0, computed.height - computed.margin_bottom + 10.0),
+        LegendPosition::OutsideBottomRight  => (plot_right - legend_width, computed.height - computed.margin_bottom + 10.0),
+        // Custom — absolute canvas pixel coordinates
+        LegendPosition::Custom(x, y)        => (x, y),
+        // DataCoords — mapped through ComputedLayout
+        LegendPosition::DataCoords(x, y)    => (computed.map_x(x), computed.map_y(y)),
     };
 
-    scene.add(Primitive::Rect {
-        x: legend_x - legend_padding + 5.0,
-        y: legend_y - legend_padding,
-        width: legend_width,
-        height: legend_height,
-        fill: Color::from(&theme.legend_bg),
-        stroke: None,
-        stroke_width: None,
-        opacity: None,
-    });
+    if legend.show_box {
+        scene.add(Primitive::Rect {
+            x: legend_x - legend_padding + 5.0,
+            y: legend_y - legend_padding,
+            width: legend_width,
+            height: legend_height,
+            fill: Color::from(&theme.legend_bg),
+            stroke: None,
+            stroke_width: None,
+            opacity: None,
+        });
+        scene.add(Primitive::Rect {
+            x: legend_x - legend_padding + 5.0,
+            y: legend_y - legend_padding,
+            width: legend_width,
+            height: legend_height,
+            fill: "none".into(),
+            stroke: Some(Color::from(&theme.legend_border)),
+            stroke_width: Some(1.0),
+            opacity: None,
+        });
+    }
 
-    scene.add(Primitive::Rect {
-        x: legend_x - legend_padding + 5.0,
-        y: legend_y - legend_padding,
-        width: legend_width,
-        height: legend_height,
-        fill: "none".into(),
-        stroke: Some(Color::from(&theme.legend_border)),
-        stroke_width: Some(1.0),
-        opacity: None,
-    });
+    let mut cur_y = legend_y;
 
-    for entry in &legend.entries {
-        // add label
+    // Optional top title
+    if let Some(ref title) = legend.title {
         scene.add(Primitive::Text {
-            x: legend_x + 25.0,
-            y: legend_y + 5.0,
-            content: entry.label.clone(),
-            anchor: TextAnchor::Start,
+            x: legend_x + legend_width / 2.0,
+            y: cur_y + 5.0,
+            content: title.clone(),
+            anchor: TextAnchor::Middle,
             size: computed.body_size,
             rotate: None,
-            bold: false,
+            bold: true,
         });
-        // add shape with colour
-        match entry.shape {
-            LegendShape::Rect => scene.add(Primitive::Rect {
+        cur_y += line_height;
+    }
+
+    if let Some(ref groups) = legend.groups {
+        for group in groups {
+            scene.add(Primitive::Text {
                 x: legend_x + 5.0,
-                y: legend_y - 1.0,
-                width: 12.0,
-                height: 12.0,
-                fill: Color::from(&entry.color),
-                stroke: None,
-                stroke_width: None,
-                opacity: None,
-            }),
-            LegendShape::Line => scene.add(Primitive::Line {
-                x1: legend_x + 5.0,
-                y1: legend_y + 2.0,
-                x2: legend_x + 5.0 + 12.0,
-                y2: legend_y + 2.0,
-                stroke: Color::from(&entry.color),
-                stroke_width: 2.0,
-                stroke_dasharray: entry.dasharray.clone(),
-            }),
-            LegendShape::Circle => scene.add(Primitive::Circle {
-                cx: legend_x + 5.0 + 6.0,
-                cy: legend_y + 1.0,
-                r: 5.0,
-                fill: Color::from(&entry.color),
-            }),
-            LegendShape::Marker(marker) => {
-                draw_marker(scene, marker, legend_x + 5.0 + 6.0, legend_y + 1.0, 5.0, &entry.color);
-            }
-            LegendShape::CircleSize(r) => {
-                let swatch_half = 8.0;
-                let draw_r = r.min(swatch_half);
-                scene.add(Primitive::Circle {
-                    cx: legend_x + 5.0 + 6.0,
-                    cy: legend_y + 1.0,
-                    r: draw_r,
-                    fill: Color::from(&entry.color),
-                });
+                y: cur_y + 5.0,
+                content: group.title.clone(),
+                anchor: TextAnchor::Start,
+                size: computed.body_size,
+                rotate: None,
+                bold: true,
+            });
+            cur_y += line_height;
+            for entry in &group.entries {
+                render_legend_entry(entry, scene, legend_x, cur_y, computed);
+                cur_y += line_height;
             }
         }
-
-        legend_y += line_height;
+    } else {
+        for entry in &legend.entries {
+            render_legend_entry(entry, scene, legend_x, cur_y, computed);
+            cur_y += line_height;
+        }
     }
 }
 
@@ -2873,40 +2935,76 @@ pub fn collect_legend_entries(plots: &[Plot]) -> Vec<LegendEntry> {
 }
 
 /// Render legend entries at an arbitrary (x, y) position on a scene.
-pub fn render_legend_at(entries: &[LegendEntry], scene: &mut Scene, x: f64, y: f64, width: f64, body_size: u32, theme: &Theme) {
+///
+/// `groups` takes priority over `entries` when `Some`. `title` adds a bold header row.
+/// `show_box` controls whether the background and border rects are drawn.
+#[allow(clippy::too_many_arguments)]
+pub fn render_legend_at(
+    entries: &[LegendEntry],
+    groups: Option<&[LegendGroup]>,
+    title: Option<&str>,
+    show_box: bool,
+    scene: &mut Scene,
+    x: f64, y: f64,
+    width: f64, body_size: u32, theme: &Theme,
+) {
     let legend_padding = 10.0;
     let line_height = 18.0;
-    let legend_height = entries.len() as f64 * line_height + legend_padding * 2.0;
 
-    // Background
-    scene.add(Primitive::Rect {
-        x: x - legend_padding + 5.0,
-        y: y - legend_padding,
-        width,
-        height: legend_height,
-        fill: Color::from(&theme.legend_bg),
-        stroke: None,
-        stroke_width: None,
-        opacity: None,
-    });
+    let entry_rows = if let Some(groups) = groups {
+        groups.iter().map(|g| g.entries.len() + 1).sum::<usize>()
+    } else {
+        entries.len()
+    };
+    let title_rows = if title.is_some() { 1 } else { 0 };
+    let legend_height = (entry_rows + title_rows) as f64 * line_height + legend_padding * 2.0;
 
-    // Border
-    scene.add(Primitive::Rect {
-        x: x - legend_padding + 5.0,
-        y: y - legend_padding,
-        width,
-        height: legend_height,
-        fill: "none".into(),
-        stroke: Some(Color::from(&theme.legend_border)),
-        stroke_width: Some(1.0),
-        opacity: None,
-    });
+    if show_box {
+        // Background
+        scene.add(Primitive::Rect {
+            x: x - legend_padding + 5.0,
+            y: y - legend_padding,
+            width,
+            height: legend_height,
+            fill: Color::from(&theme.legend_bg),
+            stroke: None,
+            stroke_width: None,
+            opacity: None,
+        });
+        // Border
+        scene.add(Primitive::Rect {
+            x: x - legend_padding + 5.0,
+            y: y - legend_padding,
+            width,
+            height: legend_height,
+            fill: "none".into(),
+            stroke: Some(Color::from(&theme.legend_border)),
+            stroke_width: Some(1.0),
+            opacity: None,
+        });
+    }
 
-    let mut legend_y = y;
-    for entry in entries {
+    // Synthesise a minimal ComputedLayout for render_legend_entry
+    let mut cur_y = y;
+
+    if let Some(t) = title {
+        scene.add(Primitive::Text {
+            x: x + width / 2.0,
+            y: cur_y + 5.0,
+            content: t.to_string(),
+            anchor: TextAnchor::Middle,
+            size: body_size,
+            rotate: None,
+            bold: true,
+        });
+        cur_y += line_height;
+    }
+
+    // Helper: inline entry rendering (avoids needing a full ComputedLayout)
+    let render_entry = |entry: &LegendEntry, scene: &mut Scene, cur_y: f64| {
         scene.add(Primitive::Text {
             x: x + 25.0,
-            y: legend_y + 5.0,
+            y: cur_y + 5.0,
             content: entry.label.clone(),
             anchor: TextAnchor::Start,
             size: body_size,
@@ -2916,7 +3014,7 @@ pub fn render_legend_at(entries: &[LegendEntry], scene: &mut Scene, x: f64, y: f
         match entry.shape {
             LegendShape::Rect => scene.add(Primitive::Rect {
                 x: x + 5.0,
-                y: legend_y - 1.0,
+                y: cur_y - 1.0,
                 width: 12.0,
                 height: 12.0,
                 fill: Color::from(&entry.color),
@@ -2926,34 +3024,57 @@ pub fn render_legend_at(entries: &[LegendEntry], scene: &mut Scene, x: f64, y: f
             }),
             LegendShape::Line => scene.add(Primitive::Line {
                 x1: x + 5.0,
-                y1: legend_y + 2.0,
+                y1: cur_y + 2.0,
                 x2: x + 5.0 + 12.0,
-                y2: legend_y + 2.0,
+                y2: cur_y + 2.0,
                 stroke: Color::from(&entry.color),
                 stroke_width: 2.0,
                 stroke_dasharray: entry.dasharray.clone(),
             }),
             LegendShape::Circle => scene.add(Primitive::Circle {
                 cx: x + 5.0 + 6.0,
-                cy: legend_y + 1.0,
+                cy: cur_y + 1.0,
                 r: 5.0,
                 fill: Color::from(&entry.color),
             }),
             LegendShape::Marker(marker) => {
-                draw_marker(scene, marker, x + 5.0 + 6.0, legend_y + 1.0, 5.0, &entry.color);
+                draw_marker(scene, marker, x + 5.0 + 6.0, cur_y + 1.0, 5.0, &entry.color);
             }
             LegendShape::CircleSize(r) => {
                 let swatch_half = 8.0;
                 let draw_r = r.min(swatch_half);
                 scene.add(Primitive::Circle {
                     cx: x + 5.0 + 6.0,
-                    cy: legend_y + 1.0,
+                    cy: cur_y + 1.0,
                     r: draw_r,
                     fill: Color::from(&entry.color),
                 });
             }
         }
-        legend_y += line_height;
+    };
+
+    if let Some(groups) = groups {
+        for group in groups {
+            scene.add(Primitive::Text {
+                x: x + 5.0,
+                y: cur_y + 5.0,
+                content: group.title.clone(),
+                anchor: TextAnchor::Start,
+                size: body_size,
+                rotate: None,
+                bold: true,
+            });
+            cur_y += line_height;
+            for entry in &group.entries {
+                render_entry(entry, scene, cur_y);
+                cur_y += line_height;
+            }
+        }
+    } else {
+        for entry in entries {
+            render_entry(entry, scene, cur_y);
+            cur_y += line_height;
+        }
     }
 }
 
@@ -4335,19 +4456,22 @@ pub fn render_multiple(plots: Vec<Plot>, layout: Layout) -> Scene {
         let title = dp.size_label.as_deref().unwrap_or("");
         add_dot_stacked_legends(title, &size_entries, &info, &mut scene, &computed);
     } else {
-        let entries = if let Some(ref manual) = layout.legend_entries {
-            manual.clone()
+        let (entries, groups) = if let Some(ref grps) = layout.legend_groups {
+            (Vec::new(), Some(grps.clone()))
         } else {
-            collect_legend_entries(&plots)
+            let e = layout.legend_entries.clone()
+                .unwrap_or_else(|| collect_legend_entries(&plots));
+            (e, None)
         };
-        if layout.show_legend && !entries.is_empty() {
-            if let Some((lx, ly)) = layout.legend_xy {
-                render_legend_at(&entries, &mut scene, lx, ly, computed.legend_width,
-                                 computed.body_size, &computed.theme);
-            } else {
-                let legend = Legend { entries, position: layout.legend_position };
-                add_legend(&legend, &mut scene, &computed);
-            }
+        if layout.show_legend && (!entries.is_empty() || groups.is_some()) {
+            let legend = Legend {
+                title: layout.legend_title.clone(),
+                entries,
+                groups,
+                position: layout.legend_position,
+                show_box: layout.legend_box,
+            };
+            add_legend(&legend, &mut scene, &computed);
         }
         if layout.show_colorbar {
             for plot in plots.iter() {
@@ -4431,9 +4555,21 @@ pub fn render_twin_y(primary: Vec<Plot>, secondary: Vec<Plot>, layout: Layout) -
 
     let mut all_plots_for_legend: Vec<Plot> = primary;
     all_plots_for_legend.extend(secondary);
-    let entries = collect_legend_entries(&all_plots_for_legend);
-    if layout.show_legend && !entries.is_empty() {
-        let legend = Legend { entries, position: layout.legend_position };
+    let (entries, groups) = if let Some(ref grps) = layout.legend_groups {
+        (Vec::new(), Some(grps.clone()))
+    } else {
+        let e = layout.legend_entries.clone()
+            .unwrap_or_else(|| collect_legend_entries(&all_plots_for_legend));
+        (e, None)
+    };
+    if layout.show_legend && (!entries.is_empty() || groups.is_some()) {
+        let legend = Legend {
+            title: layout.legend_title.clone(),
+            entries,
+            groups,
+            position: layout.legend_position,
+            show_box: layout.legend_box,
+        };
         add_legend(&legend, &mut scene, &computed);
     }
 

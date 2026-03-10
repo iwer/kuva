@@ -118,7 +118,7 @@ fn test_right_middle_preset() {
 
     let plots = vec![Plot::Scatter(scatter)];
     let layout = Layout::auto_from_plots(&plots)
-        .with_legend_position(LegendPosition::RightMiddle);
+        .with_legend_position(LegendPosition::OutsideRightMiddle);
     let out = svg(plots, layout);
     std::fs::write("test_outputs/legend_api_right_middle.svg", &out).unwrap();
 
@@ -204,5 +204,197 @@ fn test_figure_shared_legend_at() {
     assert!(
         (svg_width - expected_grid_width).abs() < 2.0,
         "SVG width {svg_width} should equal grid width {expected_grid_width} (no legend margin)"
+    );
+}
+
+fn extract_width(s: &str) -> f64 {
+    let w_start = s.find("width=\"").expect("no width attr") + 7;
+    let w_end = s[w_start..].find('"').unwrap() + w_start;
+    s[w_start..w_end].parse().expect("width parse")
+}
+
+/// with_legend_box(false): background/border rects suppressed; entries still present.
+#[test]
+fn test_legend_box_suppress() {
+    let scatter = ScatterPlot::new()
+        .with_data(vec![(1.0_f64, 2.0), (3.0, 4.0)])
+        .with_color("steelblue")
+        .with_legend("Alpha");
+    let plots = vec![Plot::Scatter(scatter)];
+    let layout = Layout::auto_from_plots(&plots).with_legend_box(false);
+    let out = svg(plots, layout);
+    std::fs::write("test_outputs/legend_api_no_box.svg", &out).unwrap();
+
+    assert!(out.contains("Alpha"), "'Alpha' should appear in SVG");
+    // The legend border rect is the only element with fill="none"; with show_box=false it is absent.
+    // (Scatter data circles use a real fill color, grid lines don't use <rect>.)
+    assert!(!out.contains("fill=\"none\""),
+        "legend border rect (fill=none) should not appear when show_box=false");
+}
+
+/// with_legend_title: a bold title row is rendered above entries.
+#[test]
+fn test_legend_title() {
+    let scatter = ScatterPlot::new()
+        .with_data(vec![(1.0_f64, 2.0), (3.0, 4.0)])
+        .with_color("steelblue")
+        .with_legend("Series A");
+    let plots = vec![Plot::Scatter(scatter)];
+    let layout = Layout::auto_from_plots(&plots).with_legend_title("Groups");
+    let out = svg(plots, layout);
+    std::fs::write("test_outputs/legend_api_title.svg", &out).unwrap();
+
+    assert!(out.contains("Groups"), "'Groups' title should appear in SVG");
+    assert!(out.contains("Series A"), "'Series A' entry should appear in SVG");
+}
+
+/// with_legend_group: two groups render all titles and all entry labels.
+#[test]
+fn test_legend_groups() {
+    let scatter = ScatterPlot::new()
+        .with_data(vec![(1.0_f64, 2.0), (3.0, 4.0)])
+        .with_color("steelblue");
+    let plots = vec![Plot::Scatter(scatter)];
+
+    let group_a = vec![
+        LegendEntry { label: "Apple".into(), color: "red".into(), shape: LegendShape::Rect, dasharray: None },
+        LegendEntry { label: "Apricot".into(), color: "orange".into(), shape: LegendShape::Rect, dasharray: None },
+    ];
+    let group_b = vec![
+        LegendEntry { label: "Banana".into(), color: "yellow".into(), shape: LegendShape::Circle, dasharray: None },
+    ];
+
+    let layout = Layout::auto_from_plots(&plots)
+        .with_legend_group("Fruits A", group_a)
+        .with_legend_group("Fruits B", group_b);
+    let out = svg(plots, layout);
+    std::fs::write("test_outputs/legend_api_groups.svg", &out).unwrap();
+
+    assert!(out.contains("Fruits A"), "'Fruits A' group title should appear");
+    assert!(out.contains("Fruits B"), "'Fruits B' group title should appear");
+    assert!(out.contains("Apple"), "'Apple' should appear");
+    assert!(out.contains("Apricot"), "'Apricot' should appear");
+    assert!(out.contains("Banana"), "'Banana' should appear");
+
+    // Group A entries appear before group B entries in SVG output order
+    let fruits_a_pos = out.find("Fruits A").expect("Fruits A missing");
+    let fruits_b_pos = out.find("Fruits B").expect("Fruits B missing");
+    assert!(fruits_a_pos < fruits_b_pos, "'Fruits A' should appear before 'Fruits B'");
+}
+
+/// InsideTopRight: legend x should be less than plot_right (inside the axes).
+#[test]
+fn test_inside_top_right() {
+    let scatter = ScatterPlot::new()
+        .with_data(vec![(1.0_f64, 2.0), (3.0, 4.0)])
+        .with_color("steelblue")
+        .with_legend("Series A");
+    let plots = vec![Plot::Scatter(scatter)];
+    let layout_ref = Layout::auto_from_plots(&plots);
+    // Canvas width without legend (InsideTopRight adds no right margin)
+    let layout = layout_ref
+        .with_legend_position(LegendPosition::InsideTopRight);
+    let out = svg(plots, layout);
+    std::fs::write("test_outputs/legend_api_inside_top_right.svg", &out).unwrap();
+
+    assert!(out.contains("Series A"), "'Series A' should appear in SVG");
+
+    // Canvas width for InsideTopRight should equal a plot without any legend
+    // (no extra right margin). We check it's narrower than OutsideRightTop width.
+    let scatter2 = ScatterPlot::new()
+        .with_data(vec![(1.0_f64, 2.0), (3.0, 4.0)])
+        .with_color("steelblue")
+        .with_legend("Series A");
+    let plots2 = vec![Plot::Scatter(scatter2)];
+    let layout_outside = Layout::auto_from_plots(&plots2);  // default OutsideRightTop
+    let out_outside = svg(plots2, layout_outside);
+    let width_inside  = extract_width(&out);
+    let width_outside = extract_width(&out_outside);
+    assert!(
+        width_inside < width_outside,
+        "InsideTopRight (width={width_inside}) should be narrower than OutsideRightTop (width={width_outside})"
+    );
+}
+
+/// OutsideLeftTop: legend near x=5; left margin expanded.
+#[test]
+fn test_outside_left() {
+    let scatter = ScatterPlot::new()
+        .with_data(vec![(1.0_f64, 2.0), (3.0, 4.0)])
+        .with_color("steelblue")
+        .with_legend("Left Label");
+    let plots = vec![Plot::Scatter(scatter)];
+    let layout = Layout::auto_from_plots(&plots)
+        .with_legend_position(LegendPosition::OutsideLeftTop);
+    let out = svg(plots, layout);
+    std::fs::write("test_outputs/legend_api_outside_left.svg", &out).unwrap();
+
+    assert!(out.contains("Left Label"), "'Left Label' should appear in SVG");
+}
+
+/// with_legend_at(x, y): Custom placement, no right-margin reserved.
+#[test]
+fn test_custom_position() {
+    let scatter = ScatterPlot::new()
+        .with_data(vec![(1.0_f64, 2.0), (3.0, 4.0)])
+        .with_color("steelblue")
+        .with_legend("Custom");
+    let plots = vec![Plot::Scatter(scatter)];
+
+    // Baseline: same plot with InsideTopRight (also no right margin)
+    let scatter2 = ScatterPlot::new()
+        .with_data(vec![(1.0_f64, 2.0), (3.0, 4.0)])
+        .with_color("steelblue")
+        .with_legend("Custom");
+    let plots2 = vec![Plot::Scatter(scatter2)];
+    let layout_baseline = Layout::auto_from_plots(&plots2)
+        .with_legend_position(LegendPosition::InsideTopRight);
+    let out_baseline = svg(plots2, layout_baseline);
+
+    let layout = Layout::auto_from_plots(&plots).with_legend_at(50.0, 50.0);
+    let out = svg(plots, layout);
+    std::fs::write("test_outputs/legend_api_custom_position.svg", &out).unwrap();
+
+    assert!(out.contains("Custom"), "'Custom' label should appear in SVG");
+
+    // Custom position adds no right margin — width should match InsideTopRight baseline.
+    let width_custom   = extract_width(&out);
+    let width_baseline = extract_width(&out_baseline);
+    assert_eq!(
+        width_custom as u64, width_baseline as u64,
+        "Custom position should not widen canvas (width={width_custom} vs baseline={width_baseline})"
+    );
+}
+
+/// with_legend_at_data: data-space placement; label present; no right margin added.
+#[test]
+fn test_data_coords_position() {
+    let scatter = ScatterPlot::new()
+        .with_data(vec![(1.0_f64, 2.0), (3.0, 4.0), (5.0, 6.0)])
+        .with_color("steelblue")
+        .with_legend("Data Coords");
+    let plots = vec![Plot::Scatter(scatter)];
+
+    // Baseline: same plot with InsideTopRight (no right margin)
+    let scatter2 = ScatterPlot::new()
+        .with_data(vec![(1.0_f64, 2.0), (3.0, 4.0), (5.0, 6.0)])
+        .with_color("steelblue")
+        .with_legend("Data Coords");
+    let plots2 = vec![Plot::Scatter(scatter2)];
+    let layout_baseline = Layout::auto_from_plots(&plots2)
+        .with_legend_position(LegendPosition::InsideTopRight);
+    let out_baseline = svg(plots2, layout_baseline);
+
+    let layout = Layout::auto_from_plots(&plots).with_legend_at_data(2.0, 4.0);
+    let out = svg(plots, layout);
+    std::fs::write("test_outputs/legend_api_data_coords.svg", &out).unwrap();
+
+    assert!(out.contains("Data Coords"), "'Data Coords' label should appear in SVG");
+
+    let width_data     = extract_width(&out);
+    let width_baseline = extract_width(&out_baseline);
+    assert_eq!(
+        width_data as u64, width_baseline as u64,
+        "DataCoords position should not widen canvas (width={width_data} vs baseline={width_baseline})"
     );
 }

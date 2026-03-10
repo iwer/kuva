@@ -1,7 +1,7 @@
 use crate::render::layout::{Layout, DEFAULT_FONT_FAMILY};
 use crate::render::plots::Plot;
 use crate::render::render::{Primitive, Scene, TextAnchor, render_multiple, collect_legend_entries, render_legend_at};
-use crate::plot::legend::LegendEntry;
+use crate::plot::legend::{LegendEntry, LegendGroup};
 
 #[derive(Debug, Clone)]
 pub enum FigureLegendPosition {
@@ -471,7 +471,7 @@ impl Figure {
                     FigureLegendPosition::Custom(x, y) => (*x, *y),
                 };
                 let body_size = user_layouts.first().map_or(12, |l| l.body_size);
-                render_legend_at(entries, &mut master, lx, ly, legend_width, body_size, &figure_theme);
+                render_legend_at(entries, None::<&[LegendGroup]>, None, true, &mut master, lx, ly, legend_width, body_size, &figure_theme);
             }
         }
 
@@ -498,7 +498,9 @@ fn clone_layout(l: &Layout) -> Layout {
     new.legend_position = l.legend_position;
     new.legend_width = l.legend_width;
     new.legend_entries = l.legend_entries.clone();
-    new.legend_xy = l.legend_xy;
+    new.legend_title = l.legend_title.clone();
+    new.legend_groups = l.legend_groups.clone();
+    new.legend_box = l.legend_box;
     new.log_x = l.log_x;
     new.log_y = l.log_y;
     new.suppress_x_ticks = l.suppress_x_ticks;
