@@ -23,6 +23,10 @@ use crate::plot::chord::ChordPlot;
 use crate::plot::sankey::SankeyPlot;
 use crate::plot::phylo::PhyloTree;
 use crate::plot::synteny::SyntenyPlot;
+use crate::plot::density::DensityPlot;
+use crate::plot::ridgeline::RidgelinePlot;
+use crate::plot::polar::PolarPlot;
+use crate::plot::ternary::TernaryPlot;
 use crate::plot::legend::ColorBarInfo;
 use crate::render::render_utils;
 
@@ -53,6 +57,10 @@ pub enum Plot {
     Sankey(SankeyPlot),
     PhyloTree(PhyloTree),
     Synteny(SyntenyPlot),
+    Density(DensityPlot),
+    Ridgeline(RidgelinePlot),
+    Polar(PolarPlot),
+    Ternary(TernaryPlot),
 }
 
 impl From<ScatterPlot>    for Plot { fn from(p: ScatterPlot)    -> Self { Plot::Scatter(p) } }
@@ -80,26 +88,21 @@ impl From<ChordPlot>      for Plot { fn from(p: ChordPlot)      -> Self { Plot::
 impl From<SankeyPlot>     for Plot { fn from(p: SankeyPlot)     -> Self { Plot::Sankey(p) } }
 impl From<PhyloTree>      for Plot { fn from(p: PhyloTree)      -> Self { Plot::PhyloTree(p) } }
 impl From<SyntenyPlot>    for Plot { fn from(p: SyntenyPlot)    -> Self { Plot::Synteny(p) } }
+impl From<DensityPlot>   for Plot { fn from(p: DensityPlot)   -> Self { Plot::Density(p) } }
+impl From<RidgelinePlot> for Plot { fn from(p: RidgelinePlot) -> Self { Plot::Ridgeline(p) } }
+impl From<PolarPlot>     for Plot { fn from(p: PolarPlot)     -> Self { Plot::Polar(p) } }
+impl From<TernaryPlot>   for Plot { fn from(p: TernaryPlot)   -> Self { Plot::Ternary(p) } }
 
-fn bounds_from_2d<I>(points: I) -> Option<((f64, f64), (f64, f64))> 
+fn bounds_from_2d<I>(points: I) -> Option<((f64, f64), (f64, f64))>
     where
         I: IntoIterator,
         I::Item: Into<(f64, f64)>,
     {
-
-    // extract values
-    let mut vals = Vec::new();
-
-    for (x, y) in points.into_iter().map(Into::into) {
-        vals.push((x, y));
-    }
-
-    if vals.is_empty() {
-        return None;
-    }
-    let (mut x_min, mut x_max) = (vals[0].0, vals[0].0);
-    let (mut y_min, mut y_max) = (vals[0].1, vals[0].1);
-    for (x, y) in vals.into_iter() {
+    let mut iter = points.into_iter().map(Into::into);
+    let (x0, y0) = iter.next()?;
+    let (mut x_min, mut x_max) = (x0, x0);
+    let (mut y_min, mut y_max) = (y0, y0);
+    for (x, y) in iter {
         x_min = x_min.min(x);
         x_max = x_max.max(x);
         y_min = y_min.min(y);
@@ -137,6 +140,7 @@ impl Plot {
             Plot::Violin(v) => v.color = color.into(),
             Plot::Band(b) => b.color = color.into(),
             Plot::Strip(s) => s.color = color.into(),
+            Plot::Density(d) => d.color = color.into(),
             _ => {}
         }
     }
@@ -235,6 +239,19 @@ impl Plot {
                 }
             }
             Plot::Histogram(h) => {
+                // Precomputed path: derive bounds from edges and counts directly
+                if let Some((edges, counts)) = &h.precomputed {
+                    if edges.len() < 2 || counts.is_empty() { return None; }
+                    let x_min = edges[0];
+                    let x_max = *edges.last().unwrap();
+                    let max_y = if h.normalize {
+                        1.0
+                    } else {
+                        counts.iter().cloned().fold(0.0_f64, f64::max)
+                    };
+                    return Some(((x_min, x_max), (0.0, max_y)));
+                }
+                // Auto-binning path: requires explicit range
                 let range = h.range?;
                 let bins = h.bins;
                 let bin_width = (range.1 - range.0) / bins as f64;
@@ -460,6 +477,53 @@ impl Plot {
                 // Rendered in pixel space; dummy bounds satisfy Layout::auto_from_plots.
                 Some(((0.0, 1.0), (0.0, 1.0)))
             }
+            Plot::Density(dp) => {
+                // Use precomputed curve if available
+                if let Some((xs, ys)) = &dp.precomputed {
+                    if xs.is_empty() { return None; }
+                    let x_min = xs.iter().cloned().fold(f64::INFINITY, f64::min);
+                    let x_max = xs.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+                    let y_max = ys.iter().cloned().fold(0.0_f64, f64::max);
+                    return Some(((x_min, x_max), (0.0, y_max * 1.1)));
+                }
+                if dp.data.len() < 2 { return None; }
+                let bw = dp.bandwidth.unwrap_or_else(|| render_utils::silverman_bandwidth(&dp.data));
+                let x_min = dp.data.iter().cloned().fold(f64::INFINITY, f64::min) - 3.0 * bw;
+                let x_max = dp.data.iter().cloned().fold(f64::NEG_INFINITY, f64::max) + 3.0 * bw;
+                // Compute approximate y_max using 50 sample points
+                let curve = render_utils::simple_kde(&dp.data, bw, 50);
+                let n = dp.data.len() as f64;
+                let norm = 1.0 / (n * bw * (2.0 * std::f64::consts::PI).sqrt());
+                let y_max_pdf = curve.iter().map(|(_, y)| y * norm).fold(0.0_f64, f64::max);
+                Some(((x_min, x_max), (0.0, y_max_pdf * 1.1)))
+            }
+            Plot::Ridgeline(rp) => {
+                if rp.groups.is_empty() { return None; }
+                let n = rp.groups.len() as f64;
+                let mut x_min = f64::INFINITY;
+                let mut x_max = f64::NEG_INFINITY;
+                for g in &rp.groups {
+                    if g.values.is_empty() { continue; }
+                    let bw = rp.bandwidth.unwrap_or_else(|| render_utils::silverman_bandwidth(&g.values));
+                    let gmin = g.values.iter().cloned().fold(f64::INFINITY, f64::min);
+                    let gmax = g.values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+                    x_min = x_min.min(gmin - 3.0 * bw);
+                    x_max = x_max.max(gmax + 3.0 * bw);
+                }
+                if !x_min.is_finite() { return None; }
+                // y_max must leave room for the top ridge to extend (1+overlap)
+                // data units above group 0's center (at y = n).  Half a unit of
+                // additional padding keeps it off the very top of the plot area.
+                Some(((x_min, x_max), (0.5, n + 1.5 + rp.overlap)))
+            }
+            Plot::Polar(_) => {
+                // Rendered in pixel space; dummy bounds satisfy Layout::auto_from_plots.
+                Some(((-1.0, 1.0), (-1.0, 1.0)))
+            }
+            Plot::Ternary(_) => {
+                // Rendered in pixel space; dummy bounds satisfy Layout::auto_from_plots.
+                Some(((-1.0, 1.0), (-1.0, 1.0)))
+            }
             Plot::Brick(bp) => {
                 let rows = if let Some(ref exp) = bp.strigar_exp {
                     exp.len()
@@ -499,6 +563,35 @@ impl Plot {
                 };
                 Some(((x_min, x_max), (0.0, rows as f64)))
             }
+        }
+    }
+
+    /// Rough upper-bound on the number of SVG primitives this plot will emit.
+    /// Used to pre-allocate the Scene elements vector and avoid repeated reallocs.
+    pub fn estimated_primitives(&self) -> usize {
+        match self {
+            Plot::Scatter(s) => {
+                let n = s.data.len();
+                let err = if s.data.iter().any(|p| p.x_err.is_some() || p.y_err.is_some()) { n * 3 } else { 0 };
+                n + err + 10
+            }
+            Plot::Line(l) => l.data.len() / 10 + 10,
+            Plot::Series(s) => s.values.len() / 10 + 10,
+            Plot::Manhattan(m) => m.points.len() + m.spans.len() * 2 + 30,
+            Plot::Heatmap(h) => {
+                let cells: usize = h.data.iter().map(|r| r.len()).sum();
+                (if h.show_values { cells * 2 } else { cells }) + 10
+            }
+            Plot::Histogram2d(h) => h.bins.iter().map(|r| r.len()).sum::<usize>() + 10,
+            Plot::Violin(v) => v.groups.len() * 20 + 10,
+            Plot::Bar(b) => b.groups.iter().map(|g| g.bars.len()).sum::<usize>() * 2 + 10,
+            Plot::Histogram(h) => h.bins * 2 + 10,
+            Plot::Brick(b) => {
+                let rows = if b.strigar_exp.is_some() { b.strigar_exp.as_ref().map_or(0, |e| e.len()) } else { b.sequences.len() };
+                let avg_cols = b.sequences.first().map_or(10, |s| s.len());
+                rows * avg_cols + 10
+            }
+            _ => 100,
         }
     }
 

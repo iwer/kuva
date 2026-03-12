@@ -27,7 +27,7 @@ fn test_auto_integers() {
 
 #[test]
 fn test_fixed() {
-    let data = vec![(0.0, 0.0), (1.0, 3.14159), (2.0, 2.71828)];
+    let data = vec![(0.0, 0.0), (1.0, std::f64::consts::PI), (2.0, std::f64::consts::E)];
     let layout = Layout::new((0.0, 2.0), (0.0, 4.0))
         .with_y_tick_format(TickFormat::Fixed(2));
     let svg = make_scatter(data, layout);

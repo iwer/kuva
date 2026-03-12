@@ -9,6 +9,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.4] — 2026-03-12
+
+### Added
+
+- **Per-point colors on `StripPlot`** — `with_colored_group(label, iter_of_(value, color)_pairs)` adds a group where each point carries its own color. Colors are matched by position; points beyond the color list fall back to the group/uniform color. Useful when each observation belongs to a distinct category (e.g. motif type) and needs to be visually distinguished within a single column.
+- **`PolarPlot`** — polar coordinate scatter/line plot with configurable radial/angular grid, compass (θ=0 north, CW) or math (θ=0 east, CCW) conventions. Supports multiple labeled series, r-max override, r-value labels, spoke angle labels. CLI: `kuva polar --r <COL> --theta <COL> [--color-by <COL>] [--mode scatter|line] [--r-max <F>] [--theta-divisions <N>] [--theta-start <DEG>]`. Closes #25.
+- **`TernaryPlot`** — ternary/simplex scatter plot with barycentric coordinate system and equilateral triangle geometry. Auto-normalize with `with_normalize(true)`, configurable grid lines (dashed), percentage tick labels on each edge, bold corner labels, and multi-group coloring. CLI: `kuva ternary --a <COL> --b <COL> --c <COL> [--color-by <COL>] [--a-label <S>] [--b-label <S>] [--c-label <S>] [--normalize] [--grid-lines <N>]`. Closes #8.
+- **`RidgelinePlot`** — ridgeline (joyplot) plot with stacked KDE density curves, one per group. Groups are labelled on the y-axis; the x-axis is the continuous data range. Supports `.with_group(label, data)`, `.with_group_color(label, data, color)`, `.with_groups(iter)`, `.with_filled(bool)`, `.with_opacity(f64)`, `.with_overlap(f64)`, `.with_bandwidth(f64)`, `.with_kde_samples(usize)`, `.with_stroke_width(f64)`, `.with_normalize(bool)`, `.with_legend(bool)`, and `.with_line_dash(s)`. CLI: `kuva ridgeline --value <COL> [--group-by <COL>] [--overlap <F>] [--filled] [--bandwidth <F>]`.
+- **`DensityPlot`** — kernel density estimate curve over a single numeric column. Gaussian KDE via Silverman's rule (or manual bandwidth), normalised to a proper probability density function (integral ≈ 1). Supports `.with_filled(bool)`, `.with_opacity(f64)`, `.with_bandwidth(f64)`, `.with_kde_samples(usize)`, `.with_stroke_width(f64)`, `.with_line_dash(s)`, `.with_legend(s)`, and `from_curve(x, y)` for pre-computed curves. Multi-group plots use one `DensityPlot` per group with `render_multiple` + palette. CLI: `kuva density --value <COL> [--color-by <COL>] [--filled] [--bandwidth <F>]`. Closes #15.
+- **`Histogram::from_bins(edges, counts)`** — create a histogram from precomputed bin edges and counts rather than raw values. `edges` must have length `counts.len() + 1`; counts are `f64` to support fractional values (density estimates, normalised outputs from R/numpy). Closes #24.
+- **`LegendPosition` expanded** — the 7 old variants are replaced by 20 new ones grouped by placement zone. All names are now prefixed with `Inside` or `Outside`:
+  - *Inside* (overlaid on the data area, 8 px inset): `InsideTopRight`, `InsideTopLeft`, `InsideBottomRight`, `InsideBottomLeft`, `InsideTopCenter`, `InsideBottomCenter`
+  - *Outside right margin*: `OutsideRightTop` *(new default)*, `OutsideRightMiddle`, `OutsideRightBottom`
+  - *Outside left margin*: `OutsideLeftTop`, `OutsideLeftMiddle`, `OutsideLeftBottom`
+  - *Outside top margin*: `OutsideTopLeft`, `OutsideTopCenter`, `OutsideTopRight`
+  - *Outside bottom margin*: `OutsideBottomLeft`, `OutsideBottomCenter`, `OutsideBottomRight`
+  - `Custom(f64, f64)` — absolute SVG canvas pixel coordinates (what `with_legend_at` now sets internally)
+  - `DataCoords(f64, f64)` — data-space coordinates mapped through `map_x`/`map_y` at render time
+- **`Layout::with_legend_box(bool)`** — suppress the legend background and border rects; entries and swatches still render
+- **`Layout::with_legend_title(s)`** — renders a bold title row above all legend entries
+- **`Layout::with_legend_group(title, entries)`** — adds a labelled group of entries; multiple calls stack and take priority over `with_legend_entries`
+- **`Layout::with_legend_at_data(x, y)`** — places the legend at data-space coordinates (`DataCoords` variant); no right-margin reserved
+- **`LegendGroup` struct** — `{ title: String, entries: Vec<LegendEntry> }`; exported from `kuva::plot`
+- **`Layout::with_legend_width(px)`** / **`with_legend_height(px)`** — override auto-computed legend box dimensions
+- **`Layout::with_scale(f)`** — uniform scale factor for all plot chrome: font sizes, margins, tick mark lengths, stroke widths, legend padding/swatch geometry, and annotation arrow sizes. Canvas `width`/`height` are unaffected. CLI: `--scale` on all subcommands.
+- **Fine-grained tick and gridline control** ([#13](https://github.com/Psy-Fer/kuva/issues/13)) — `Layout::with_x_axis_min/max`, `with_y_axis_min/max`, `with_x_tick_step`, `with_y_tick_step`, `with_minor_ticks(n)`, `with_show_minor_grid(bool)`; minor ticks are 3 px marks; minor gridlines use 0.5 stroke-width. CLI: `--x-min`, `--x-max`, `--y-min`, `--y-max`, `--x-tick-step`, `--y-tick-step`, `--minor-ticks`, `--minor-grid`.
+- **Per-point colors on `ScatterPlot` and per-group colors on `StripPlot`** — `ScatterPlot::with_colors(iter)` indexed per point; `StripPlot::with_group_colors(iter)` indexed per group. Both fall back to the uniform `color` field for out-of-range indices. `ScatterPlot::bounds()` now returns `None` on empty data rather than panicking.
+- **Per-group colors on `ViolinPlot` and `BoxPlot`** — `with_group_colors(iter)` added to both, mirroring `StripPlot`. All elements of a box group (box, whiskers, caps) share the group color. CLI: `--group-colors` (comma-separated) on `kuva violin` and `kuva box`.
+- **Circle marker opacity + stroke** — `Primitive::Circle` and `Primitive::CircleBatch` now carry `fill_opacity: Option<f64>`, `stroke: Option<Color>`, and `stroke_width: Option<f64>`. Builder methods `with_marker_opacity(f64)` and `with_marker_stroke_width(f64)` added to `ScatterPlot`, `StripPlot`, `PolarPlot` (per-series), and `TernaryPlot`.
+- **`Color` type** (`render::color`) — 3-variant enum (`Rgb/None/Css`) replacing `String` for fill/stroke in the render pipeline; `Color::Rgb(u8,u8,u8)` is 4 bytes inline with zero heap allocation; `From<&str>` parses hex, `rgb()`, `"none"`, and 50+ named CSS colors.
+- **`CircleBatch` and `RectBatch`** — SoA (struct-of-arrays) `Primitive` variants with contiguous coordinate arrays for scatter and heatmap; all backends support them.
+- **Benchmark suite** — `benches/render.rs`, `benches/svg.rs`, `benches/kde.rs` with Criterion; `docs/src/benchmarks.md` with tables and run instructions.
+
+### Changed
+
+- `Layout::with_legend_at(x, y)` now sets `legend_position = Custom(x, y)`; `legend_xy` field removed
+- Margin calculation in `ComputedLayout::from_layout` is position-aware: `Inside*`, `Custom`, and `DataCoords` add no margin; `Outside*` variants expand the appropriate edge
+- `render_legend_at` signature extended with `groups`, `title`, and `show_box` parameters
+- Legend width auto-sizing character multiplier increased from 7.0 → 8.5 px/char
+- `Primitive::Path` now uses `Box<PathData>` — shrinks enum from ~128 to ~88 bytes per element
+- SVG output uses hex colors for named CSS colors (e.g. `fill="red"` → `fill="#ff0000"`)
+- **SVG serialization 50–70% faster** — replaced all `format!()` calls in `SvgBackend` with direct `push_str()`/`write!()`; eliminates per-primitive heap allocations in hot loops
+- **Float formatting via `ryu`** — 2–5× faster float→string conversion; coordinates rounded to 2 decimal places; whole numbers omit the decimal point
+- **Single-pass XML escaping** — `write_escaped()` scans text content once; no allocation when input has no special characters
+- **`PngBackend` font database cached** — system fonts loaded once via `OnceLock`; eliminates 100ms+ overhead on repeated PNG renders
+- **`Scene` pre-allocated** — `Scene::new()` accepts an estimated primitive count and calls `Vec::with_capacity()`
+- **KDE truncated kernel** — `simple_kde` windows evaluations to `[x ± 4bw]` via binary search; ~8× faster at 100k samples
+- **Manhattan pre-bucketing** — SNPs bucketed into `HashMap<&str, Vec<usize>>` before span loop; ~22× faster at 1M SNPs
+- **Heatmap single-pass** — two nested loops merged into one; intermediate `flat: Vec<f64>` allocation eliminated
+
+### Fixed
+
+- **`render_twin_y` now supports `Plot::Density`** — `DensityPlot` was silently dropped in both the primary and secondary match arms; it is now routed to `add_density` with the correct computed layout for each axis.
+- **Legend overhaul** — background/border rects can now be suppressed via `with_legend_box(false)`; y-axis label x-position computed dynamically from actual tick label widths rather than a fixed offset; `margin_left` now uses actual tick string generation instead of a 6-char heuristic
+- **`BrickPlot` strigar color/legend ordering** — deterministic sort replaces `HashMap` iteration order; output is now byte-identical across runs
+- **Rotated x-axis tick labels** — `margin_left`/`margin_right` now account for horizontal projection of rotated labels; `TextAnchor::Start` used for positive rotation angles. Affects bar, waterfall, candlestick, and dot plots.
+- **Terminal legend swatch alignment** — `LegendShape::Line` swatches now write to `char_grid` so they take priority over legend background; `LegendShape::Rect` snaps to `height × 0.75` so swatches land in the same row as their label at all terminal sizes
+- **Terminal legend entry spacing** — legend entries step by exact whole-cell multiples (`round(18 / cell_h).max(1) * cell_h`); eliminates fractional-row misalignment across all terminal sizes and subcommands
+- **Terminal phylo leaf label row** — removed `+ 4.0` SVG baseline offset on leaf labels for Left/Right orientations
+- **`ridgeline` example** — output now written to `docs/src/assets/ridgeline/` instead of the repo root
+
+---
+
 ## [0.1.3] — 2026-03-04
 
 ### Added

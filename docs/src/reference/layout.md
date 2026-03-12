@@ -267,6 +267,138 @@ let layout = Layout::auto_from_plots(&plots)
 
 ---
 
+## Scale
+
+`with_scale(f)` applies a single multiplier to every piece of plot chrome — font sizes, margins, tick mark lengths, stroke widths, legend padding and swatch geometry, and annotation arrow sizes. The default is `1.0` (no change). The canvas `width` and `height` are **not** affected.
+
+```rust,no_run
+# use kuva::render::layout::Layout;
+# use kuva::render::plots::Plot;
+# let plots: Vec<Plot> = vec![];
+let layout = Layout::auto_from_plots(&plots)
+    .with_title("Growth Rate")
+    .with_x_label("Time (weeks)")
+    .with_y_label("Count")
+    .with_scale(2.0);  // everything twice as large
+```
+
+The four scale levels below all use the same default canvas size (`600 × 450` plot area). Notice how at `0.5×` the chrome feels cramped while at `2.0×` tick labels and the legend are clearly legible even when the SVG is scaled down in a browser:
+
+<table>
+<tr>
+<td><img src="../assets/scale/scale_0_5x.svg" alt="scale 0.5x" width="280"></td>
+<td><img src="../assets/scale/scale_1x.svg" alt="scale 1.0x" width="280"></td>
+</tr>
+<tr>
+<td align="center"><code>.with_scale(0.5)</code></td>
+<td align="center"><code>.with_scale(1.0)</code> — default</td>
+</tr>
+<tr>
+<td><img src="../assets/scale/scale_1_5x.svg" alt="scale 1.5x" width="280"></td>
+<td><img src="../assets/scale/scale_2x.svg" alt="scale 2.0x" width="280"></td>
+</tr>
+<tr>
+<td align="center"><code>.with_scale(1.5)</code></td>
+<td align="center"><code>.with_scale(2.0)</code></td>
+</tr>
+</table>
+
+### Combining scale with canvas size
+
+`with_scale` makes the chrome proportionally larger but keeps the plot area the same size. At `2.0×` the default canvas will feel tight because the margins (which scale) eat into the fixed-size plot area. To keep the same visual balance as the default, scale the canvas dimensions by the same factor:
+
+```rust,no_run
+# use kuva::render::layout::Layout;
+# use kuva::render::plots::Plot;
+# let plots: Vec<Plot> = vec![];
+let scale = 2.0_f64;
+let layout = Layout::auto_from_plots(&plots)
+    .with_scale(scale)
+    .with_width(1200.0)   // 600 * scale
+    .with_height(900.0);  // 450 * scale
+```
+
+<img src="../assets/scale/scale_with_larger_canvas.svg" alt="scale 2x with larger canvas" width="560">
+
+The result has the same data density as the default but every pixel measurement is doubled — useful for publication figures that will be embedded at a reduced size.
+
+### Limitations — what you must adjust manually
+
+Two categories of user-set values are **not** auto-scaled because they are specified explicitly when constructing the object, not derived from `Layout`:
+
+#### 1. `TextAnnotation::font_size`
+
+`TextAnnotation` has its own `font_size` field (default `12`). When you call `.with_scale(2.0)`, the annotation arrow and its stroke scale automatically, but the text does not. Scale it in the constructor:
+
+```rust,no_run
+# use kuva::render::layout::Layout;
+# use kuva::render::plots::Plot;
+# use kuva::render::annotations::TextAnnotation;
+# let plots: Vec<Plot> = vec![];
+let scale = 2.0_f64;
+let layout = Layout::auto_from_plots(&plots)
+    .with_annotation(
+        TextAnnotation::new("Peak", 9.0, 16.0)
+            .with_arrow(9.0, 16.0)
+            .with_font_size((11.0 * scale).round() as u32),  // scale manually
+    )
+    .with_scale(scale);
+```
+
+The two SVGs below use `with_scale(2.0)`. In the left one the annotation font is the default `11px` regardless of scale; in the right one it has been multiplied by `2.0`:
+
+<table>
+<tr>
+<td><img src="../assets/scale/annotation_not_scaled.svg" alt="annotation not scaled" width="280"></td>
+<td><img src="../assets/scale/annotation_scaled_manually.svg" alt="annotation scaled manually" width="280"></td>
+</tr>
+<tr>
+<td align="center">annotation font unchanged (11 px)</td>
+<td align="center">annotation font doubled (22 px)</td>
+</tr>
+</table>
+
+#### 2. `ReferenceLine::stroke_width`
+
+`ReferenceLine` stores its own `stroke_width` (default `1.0`). The line is drawn at exactly that pixel width regardless of `with_scale`. Multiply it manually:
+
+```rust,no_run
+# use kuva::render::layout::Layout;
+# use kuva::render::plots::Plot;
+# use kuva::render::annotations::ReferenceLine;
+# let plots: Vec<Plot> = vec![];
+let scale = 2.0_f64;
+let layout = Layout::auto_from_plots(&plots)
+    .with_reference_line(
+        ReferenceLine::horizontal(10.0)
+            .with_stroke_width(1.0 * scale),  // scale manually
+    )
+    .with_scale(scale);
+```
+
+#### 3. PNG raster output — use DPI scale instead
+
+For raster output, `PngBackend` already has its own DPI multiplier:
+
+```rust,no_run
+# use kuva::render::layout::Layout;
+# use kuva::render::plots::Plot;
+# use kuva::render::render::render_multiple;
+# let plots: Vec<Plot> = vec![];
+# let layout = Layout::auto_from_plots(&plots);
+#[cfg(feature = "raster")]
+{
+    use kuva::backend::png::PngBackend;
+    let scene = render_multiple(plots, layout);
+    // Render at 3× pixel density — no need for with_scale
+    let png = PngBackend::new().with_scale(3.0).render_scene(&scene);
+}
+```
+
+The two mechanisms are independent and can be combined, but doing so is rarely necessary. Use `Layout::with_scale` when you want a larger SVG; use `PngBackend::with_scale` when you want a higher-DPI PNG from an unchanged SVG layout.
+
+---
+
 ## Typography
 
 Font family and sizes for all text elements. Sizes are in pixels.
@@ -313,12 +445,13 @@ These can also be set via a `Theme` — see the [Themes](./themes.md) reference.
 | `.with_log_scale()` | Logarithmic on both axes |
 | `.with_show_grid(bool)` | Show or hide grid lines (default `true`) |
 
-### Canvas
+### Canvas and scale
 
 | Method | Description |
 |--------|-------------|
 | `.with_width(px)` | Total SVG width in pixels |
 | `.with_height(px)` | Total SVG height in pixels |
+| `.with_scale(f)` | Uniform scale factor for all plot chrome (default `1.0`). Font sizes, margins, tick marks, legend geometry, and arrow sizes all multiply by `f`. Canvas size is unaffected. `TextAnnotation::font_size` and `ReferenceLine::stroke_width` must be scaled manually. |
 
 ### Annotations
 
@@ -327,6 +460,70 @@ These can also be set via a `Theme` — see the [Themes](./themes.md) reference.
 | `.with_annotation(TextAnnotation)` | Text label with optional arrow |
 | `.with_reference_line(ReferenceLine)` | Horizontal or vertical dashed line |
 | `.with_shaded_region(ShadedRegion)` | Horizontal or vertical filled band |
+
+### Legend
+
+| Method | Description |
+|--------|-------------|
+| `.with_legend_entries(Vec<LegendEntry>)` | Supply entries directly, bypassing auto-collection; auto-sizes `legend_width` |
+| `.with_legend_at(x, y)` | Place legend at absolute SVG pixel coordinates (`Custom` variant); no margin reserved |
+| `.with_legend_at_data(x, y)` | Place legend at data-space coordinates, mapped through axes at render time |
+| `.with_legend_position(LegendPosition)` | Choose a preset legend placement |
+| `.with_legend_box(bool)` | Show or hide the legend background and border box (default `true`) |
+| `.with_legend_title(s)` | Render a bold title row above all legend entries |
+| `.with_legend_group(title, entries)` | Add a labelled group of entries; multiple calls stack |
+| `.with_legend_width(px)` | Override the auto-computed legend box width |
+| `.with_legend_height(px)` | Override the auto-computed legend box height |
+
+`LegendPosition` variants (grouped by placement zone):
+
+**Inside the plot axes** — overlaid on the data area, 8 px inset from the axis edges:
+
+| Variant | Corner |
+|---------|--------|
+| `InsideTopRight` | Upper-right |
+| `InsideTopLeft` | Upper-left |
+| `InsideBottomRight` | Lower-right |
+| `InsideBottomLeft` | Lower-left |
+| `InsideTopCenter` | Top edge, centred |
+| `InsideBottomCenter` | Bottom edge, centred |
+
+**Outside the plot axes** — placed in a margin; the canvas expands to accommodate:
+
+| Variant | Placement |
+|---------|-----------|
+| `OutsideRightTop` *(default)* | Right margin, top-aligned |
+| `OutsideRightMiddle` | Right margin, vertically centred |
+| `OutsideRightBottom` | Right margin, bottom-aligned |
+| `OutsideLeftTop` | Left margin, top-aligned |
+| `OutsideLeftMiddle` | Left margin, vertically centred |
+| `OutsideLeftBottom` | Left margin, bottom-aligned |
+| `OutsideTopLeft` | Top margin, left-aligned |
+| `OutsideTopCenter` | Top margin, centred |
+| `OutsideTopRight` | Top margin, right-aligned |
+| `OutsideBottomLeft` | Bottom margin, left-aligned |
+| `OutsideBottomCenter` | Bottom margin, centred |
+| `OutsideBottomRight` | Bottom margin, right-aligned |
+
+**Freeform** — no margin change; you control the position:
+
+| Variant | Placement |
+|---------|-----------|
+| `Custom(x, y)` | Absolute SVG canvas pixel coordinates |
+| `DataCoords(x, y)` | Data-space coordinates mapped through `map_x`/`map_y` at render time |
+
+### Legend sizing overrides
+
+The legend box dimensions are computed automatically — width from the longest label (at ~8.5 px per character), height from the number of entries and groups. If the auto-sizing is off for your data, override either dimension explicitly:
+
+```rust,no_run
+# use kuva::render::layout::Layout;
+# use kuva::render::plots::Plot;
+# let plots: Vec<Plot> = vec![];
+let layout = Layout::auto_from_plots(&plots)
+    .with_legend_width(180.0)   // wider box for long labels
+    .with_legend_height(120.0); // taller box for manual height control
+```
 
 ### Typography
 

@@ -10,6 +10,8 @@
 - [Line Plot](./plots/line.md)
 - [Bar Chart](./plots/bar.md)
 - [Histogram](./plots/histogram.md)
+- [Density Plot](./plots/density.md)
+- [Ridgeline Plot](./plots/ridgeline.md)
 - [2D Histogram](./plots/histogram2d.md)
 - [Series Plot](./plots/series.md)
 - [Band Plot](./plots/band.md)
@@ -31,6 +33,8 @@
 - [UpSet Plot](./plots/upset.md)
 - [Volcano Plot](./plots/volcano.md)
 - [Manhattan Plot](./plots/manhattan.md)
+- [Polar Plot](./plots/polar.md)
+- [Ternary Plot](./plots/ternary.md)
 
 # CLI
 
@@ -41,6 +45,7 @@
 
 - [Figure (Multi-Plot)](./reference/figure.md)
 - [Layout & Axes](./reference/layout.md)
+- [Legends](./reference/legends.md)
 - [Themes](./reference/themes.md)
 - [Color Palettes](./reference/palettes.md)
 

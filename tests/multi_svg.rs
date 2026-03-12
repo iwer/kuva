@@ -17,8 +17,8 @@ fn test_line_svg_output_builder() {
 
     let markers = ScatterPlot::new()
         .with_data(vec![(0.0, 0.0),
-                        (1.57, 1.0),
-                        (3.14, 0.0),
+                        (std::f64::consts::FRAC_PI_2, 1.0),
+                        (std::f64::consts::PI, 0.0),
         ])
         .with_color("red")
         .with_legend("Markers");

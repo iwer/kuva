@@ -12,7 +12,7 @@ fn bench_svg_circles(c: &mut Criterion) {
                 cx: (i % 800) as f64,
                 cy: (i % 500) as f64,
                 r: 3.0,
-                fill: "#4c72b0".to_string(),
+                fill: kuva::render::color::Color::from("#4c72b0"),
             });
         }
 

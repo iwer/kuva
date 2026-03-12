@@ -1,0 +1,3 @@
+[alias]
+ci-test   = "test --features cli,full"
+ci-clippy = "clippy --features cli,full -- -D warnings"

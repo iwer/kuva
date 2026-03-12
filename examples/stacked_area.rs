@@ -125,7 +125,7 @@ fn legend_position() {
         .with_color("mediumseagreen").with_legend("SVs")
         .with_series([ 15.0,  17.0,  14.0,  19.0,  18.0,  18.0,  16.0,  21.0,  19.0,  23.0,  21.0,  24.0])
         .with_color("tomato").with_legend("CNVs")
-        .with_legend_position(LegendPosition::BottomLeft);
+        .with_legend_position(LegendPosition::InsideBottomLeft);
 
     let plots = vec![Plot::StackedArea(sa)];
     let layout = Layout::auto_from_plots(&plots)

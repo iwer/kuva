@@ -1,12 +1,14 @@
 use crate::render::layout::{Layout, DEFAULT_FONT_FAMILY};
 use crate::render::plots::Plot;
 use crate::render::render::{Primitive, Scene, TextAnchor, render_multiple, collect_legend_entries, render_legend_at};
-use crate::plot::legend::LegendEntry;
+use crate::plot::legend::{LegendEntry, LegendGroup};
 
 #[derive(Debug, Clone)]
 pub enum FigureLegendPosition {
     Right,
     Bottom,
+    /// Arbitrary pixel position within the figure canvas.
+    Custom(f64, f64),
 }
 
 #[derive(Debug, Clone)]
@@ -247,6 +249,12 @@ impl Figure {
         self
     }
 
+    /// Place the shared legend at an arbitrary pixel position within the figure canvas.
+    pub fn with_shared_legend_at(mut self, x: f64, y: f64) -> Self {
+        self.shared_legend = Some(FigureLegendPosition::Custom(x, y));
+        self
+    }
+
     /// Provide manual legend entries instead of auto-collecting.
     pub fn with_shared_legend_entries(mut self, entries: Vec<LegendEntry>) -> Self {
         self.shared_legend_entries = Some(entries);
@@ -460,9 +468,10 @@ impl Figure {
                         let ly = grid_height + legend_spacing / 2.0;
                         (lx, ly)
                     }
+                    FigureLegendPosition::Custom(x, y) => (*x, *y),
                 };
                 let body_size = user_layouts.first().map_or(12, |l| l.body_size);
-                render_legend_at(entries, &mut master, lx, ly, legend_width, body_size, &figure_theme);
+                render_legend_at(entries, None::<&[LegendGroup]>, None, true, &mut master, lx, ly, legend_width, body_size, &figure_theme);
             }
         }
 
@@ -488,6 +497,11 @@ fn clone_layout(l: &Layout) -> Layout {
     new.show_colorbar = l.show_colorbar;
     new.legend_position = l.legend_position;
     new.legend_width = l.legend_width;
+    new.legend_entries = l.legend_entries.clone();
+    new.legend_title = l.legend_title.clone();
+    new.legend_groups = l.legend_groups.clone();
+    new.legend_box = l.legend_box;
+    new.legend_height = l.legend_height;
     new.log_x = l.log_x;
     new.log_y = l.log_y;
     new.suppress_x_ticks = l.suppress_x_ticks;
@@ -510,6 +524,10 @@ fn clone_layout(l: &Layout) -> Layout {
     new.x_datetime = l.x_datetime.clone();
     new.y_datetime = l.y_datetime.clone();
     new.x_tick_rotate = l.x_tick_rotate;
+    new.x_label_offset = l.x_label_offset;
+    new.y_label_offset = l.y_label_offset;
+    new.y2_label_offset = l.y2_label_offset;
+    new.scale = l.scale;
     new
 }
 

@@ -215,6 +215,18 @@ impl Canvas {
     /// Draw a horizontal box-drawing line at char_row `cy` from `cx0` to `cx1`.
     fn draw_hline(&mut self, cx0: isize, cy: isize, cx1: isize, color: Rgb) {
         let (lo, hi) = if cx0 <= cx1 { (cx0, cx1) } else { (cx1, cx0) };
+        // Short spans (≤8 cells) are typically legend swatches drawn on top of a
+        // filled legend background rect (█ in char_grid). Write to char_grid for
+        // those so the swatch appears above the background.
+        //
+        // However, tick marks from the y-axis are also short and their right
+        // endpoint lands exactly on the y-axis column, which already has
+        // TOP|BOTTOM bits in line_char_bits.  Writing a short tick to char_grid
+        // would hide the y-axis line at that row (char_grid layer beats
+        // line_char_bits layer).  Fix: only write to char_grid when the cell
+        // already contains a legend background character (█); otherwise always
+        // accumulate bits in line_char_bits so ticks combine with the axis line.
+        let is_swatch = (hi - lo) <= 8;
         for cx in lo..=hi {
             let bits = if lo == hi {
                 LEFT | RIGHT
@@ -225,7 +237,23 @@ impl Canvas {
             } else {
                 LEFT | RIGHT
             };
-            self.set_line_bits(cx, cy, bits, color);
+            if is_swatch {
+                let on_legend_bg = if cx >= 0 && cy >= 0 {
+                    let cxu = cx as usize;
+                    let cyu = cy as usize;
+                    cxu < self.cols && cyu < self.rows
+                        && matches!(self.char_grid[cyu][cxu], Some(('█', _)))
+                } else {
+                    false
+                };
+                if on_legend_bg {
+                    self.set_char(cx, cy, bitmask_to_char(bits), color);
+                } else {
+                    self.set_line_bits(cx, cy, bits, color);
+                }
+            } else {
+                self.set_line_bits(cx, cy, bits, color);
+            }
         }
     }
 
@@ -440,8 +468,8 @@ impl Canvas {
         let (tx, ty) = self.current_offset();
 
         match p {
-            Primitive::Circle { cx, cy, r, fill } => {
-                let rgb = css_to_rgb(fill);
+            Primitive::Circle { cx, cy, r, fill, .. } => {
+                let rgb = css_to_rgb(&fill.to_svg_string());
                 let cx_s = cx + tx;
                 let cy_s = cy + ty;
                 let bw = (self.cols * 2) as f64;
@@ -462,16 +490,21 @@ impl Canvas {
             }
 
             Primitive::Line { x1, y1, x2, y2, stroke, .. } => {
-                let rgb = css_to_rgb(stroke);
+                let rgb = css_to_rgb(&stroke.to_svg_string());
                 // Strictly horizontal or vertical lines (within half a scene pixel)
                 // are drawn with box-drawing characters for clean axis rendering.
                 // All other lines use Bresenham braille.
                 let is_h = (y1 - y2).abs() < 0.5;
                 let is_v = (x1 - x2).abs() < 0.5;
                 if is_h {
-                    let cy = self.to_cy(y1 + ty);
                     let cx0 = self.to_cx(x1 + tx);
                     let cx1 = self.to_cx(x2 + tx);
+                    // Short lines (≤8 cells) are legend swatches. The swatch y is
+                    // swatch_cy, which sits ~4.2 px above text_baseline (= body_size
+                    // * 0.35). Adding that offset makes the swatch land in the same
+                    // character row as its label without touching SVG output.
+                    let swatch_y_offset = if (cx1 - cx0).abs() <= 8 { 4.2 } else { 0.0 };
+                    let cy = self.to_cy(y1 + ty + swatch_y_offset);
                     self.draw_hline(cx0, cy, cx1, rgb);
                 } else if is_v {
                     let cx = self.to_cx(x1 + tx);
@@ -487,9 +520,10 @@ impl Canvas {
                 }
             }
 
-            Primitive::Path { d, stroke, fill, .. } => {
-                let has_stroke = stroke != "none";
-                let fill_str = fill.as_deref().unwrap_or("none");
+            Primitive::Path(pd) => {
+                let has_stroke = !matches!(pd.stroke, crate::render::color::Color::None);
+                let fill_str_owned = pd.fill.as_ref().map(|c| c.to_svg_string()).unwrap_or_else(|| "none".to_string());
+                let fill_str = fill_str_owned.as_str();
                 // SVG gradient references (url(#...)) can't be resolved in the
                 // terminal; treat them as a neutral grey.
                 let fill_rgb = if fill_str == "none" || fill_str.is_empty() {
@@ -513,7 +547,7 @@ impl Canvas {
                     let mut poly: Vec<(f64, f64)> = Vec::new();
                     let mut cur = (tx, ty);
                     let mut start = cur;
-                    for cmd in parse_path(d) {
+                    for cmd in parse_path(&pd.d) {
                         match cmd {
                             PathCmd::MoveTo(x, y) => {
                                 if poly.len() >= 3 {
@@ -556,13 +590,13 @@ impl Canvas {
 
                 // Stroked paths — draw outline with Bresenham as before.
                 let rgb = if has_stroke {
-                    css_to_rgb(stroke)
+                    css_to_rgb(&pd.stroke.to_svg_string())
                 } else {
                     fill_rgb.unwrap()
                 };
                 let mut cur = (tx, ty);
                 let mut start = cur;
-                for cmd in parse_path(d) {
+                for cmd in parse_path(&pd.d) {
                     match cmd {
                         PathCmd::MoveTo(x, y) => {
                             cur = (x + tx, y + ty);
@@ -624,10 +658,10 @@ impl Canvas {
             }
 
             Primitive::Rect { x, y, width, height, fill, .. } => {
-                if fill == "none" {
+                if matches!(fill, crate::render::color::Color::None) {
                     return;
                 }
-                let rgb = css_to_rgb(fill);
+                let rgb = css_to_rgb(&fill.to_svg_string());
                 let x_s = x + tx;
                 let y_s = y + ty;
                 let width = *width;
@@ -652,8 +686,10 @@ impl Canvas {
                 };
                 // Also snap when height is small in absolute SVG pixels (≤16 px
                 // covers legend swatches at 12 px regardless of terminal size).
+                // Snap to the lower-third (0.75) rather than centre (0.5) so the
+                // swatch lands in the same character row as its text_baseline label.
                 let (cy0, cy1) = if height < cell_h.max(16.0) {
-                    let r = self.to_cy(y_s + height * 0.5)
+                    let r = self.to_cy(y_s + height * 0.75)
                         .max(0)
                         .min(self.rows as isize - 1);
                     (r, r)
@@ -740,6 +776,46 @@ impl Canvas {
             Primitive::GroupEnd => {
                 if self.transform_stack.len() > 1 {
                     self.transform_stack.pop();
+                }
+            }
+
+            Primitive::CircleBatch { cx, cy, r, fill, .. } => {
+                let rgb = css_to_rgb(&fill.to_svg_string());
+                for i in 0..cx.len() {
+                    let cx_s = cx[i] + tx;
+                    let cy_s = cy[i] + ty;
+                    let bw = (self.cols * 2) as f64;
+                    let bh = (self.rows * 4) as f64;
+                    let bx_min = self.to_bx(cx_s - r).max(0);
+                    let by_min = self.to_by(cy_s - r).max(0);
+                    let bx_max = self.to_bx(cx_s + r).min(bw as isize - 1);
+                    let by_max = self.to_by(cy_s + r).min(bh as isize - 1);
+                    for bx in bx_min..=bx_max {
+                        for by in by_min..=by_max {
+                            let px = bx as f64 * self.scene_width / bw;
+                            let py = by as f64 * self.scene_height / bh;
+                            if (px - cx_s).powi(2) + (py - cy_s).powi(2) <= r * r {
+                                self.set_dot(bx, by, rgb);
+                            }
+                        }
+                    }
+                }
+            }
+
+            Primitive::RectBatch { x, y, w, h, fills } => {
+                for i in 0..x.len() {
+                    let rgb = css_to_rgb(&fills[i].to_svg_string());
+                    let x_s = x[i] + tx;
+                    let y_s = y[i] + ty;
+                    let x1 = self.to_bx(x_s).max(0);
+                    let y1 = self.to_by(y_s).max(0);
+                    let x2 = self.to_bx(x_s + w[i]).min((self.cols * 2) as isize - 1);
+                    let y2 = self.to_by(y_s + h[i]).min((self.rows * 4) as isize - 1);
+                    for bx in x1..=x2 {
+                        for by in y1..=y2 {
+                            self.set_dot(bx, by, rgb);
+                        }
+                    }
                 }
             }
         }

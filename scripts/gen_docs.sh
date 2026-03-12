@@ -14,16 +14,20 @@ EXAMPLES=(
     candlestick
     chord
     contour
+    density
+    ridgeline
     dotplot
     heatmap
     histogram
     histogram2d
     layout
+    legends
     line
     manhattan
     phylo
     pie
     sankey
+    scale
     scatter
     series
     stacked_area
@@ -33,6 +37,8 @@ EXAMPLES=(
     violin
     volcano
     waterfall
+    polar
+    ternary
     all_plots_simple
     all_plots_complex
 )
