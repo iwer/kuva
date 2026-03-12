@@ -19,6 +19,10 @@ pub enum StripStyle {
 pub struct StripGroup {
     pub label: String,
     pub values: Vec<f64>,
+    /// Optional per-point colors. When set, overrides both `group_colors` and the
+    /// uniform `color` for each point individually. Shorter than `values` → remaining
+    /// points fall back to the group/uniform color.
+    pub point_colors: Option<Vec<String>>,
 }
 
 /// Builder for a strip plot (also called a dot plot or univariate scatter).
@@ -126,6 +130,45 @@ impl StripPlot {
         self.groups.push(StripGroup {
             label: label.into(),
             values: values.into_iter().map(Into::into).collect(),
+            point_colors: None,
+        });
+        self
+    }
+
+    /// Add a group where each point carries its own color.
+    ///
+    /// `points` is any iterator of `(value, color)` pairs. Colors are matched to points
+    /// by position; the uniform [`with_color`](Self::with_color) / per-group color is
+    /// used as a fallback for any point beyond the end of the list.
+    ///
+    /// Use this when each observation belongs to a distinct category (e.g. a motif type)
+    /// and you want to color individual points independently within the same column.
+    ///
+    /// ```rust,no_run
+    /// # use kuva::plot::StripPlot;
+    /// let strip = StripPlot::new()
+    ///     .with_colored_group("Sample", vec![
+    ///         (1.5, "steelblue"),
+    ///         (2.3, "tomato"),
+    ///         (1.8, "seagreen"),
+    ///     ])
+    ///     .with_swarm();
+    /// ```
+    pub fn with_colored_group<S, V, C, I>(mut self, label: S, points: I) -> Self
+    where
+        S: Into<String>,
+        I: IntoIterator<Item = (V, C)>,
+        V: Into<f64>,
+        C: Into<String>,
+    {
+        let (values, colors): (Vec<f64>, Vec<String>) = points
+            .into_iter()
+            .map(|(v, c)| (v.into(), c.into()))
+            .unzip();
+        self.groups.push(StripGroup {
+            label: label.into(),
+            values,
+            point_colors: Some(colors),
         });
         self
     }

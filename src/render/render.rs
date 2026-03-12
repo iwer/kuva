@@ -987,9 +987,9 @@ fn add_boxplot(boxplot: &BoxPlot, scene: &mut Scene, computed: &ComputedLayout) 
                 (i + 1) as f64,
                 style,
                 &boxplot.overlay_color,
+                None,
                 boxplot.overlay_size,
                 boxplot.overlay_seed.wrapping_add(i as u64),
-                None,
                 None,
                 None,
                 scene,
@@ -1062,9 +1062,9 @@ fn add_violin(violin: &ViolinPlot, scene: &mut Scene, computed: &ComputedLayout)
                 (i + 1) as f64,
                 style,
                 &violin.overlay_color,
+                None,
                 violin.overlay_size,
                 violin.overlay_seed.wrapping_add(i as u64),
-                None,
                 None,
                 None,
                 scene,
@@ -1430,26 +1430,36 @@ fn add_strip_points(
     x_center_data: f64,
     style: &StripStyle,
     color: &str,
+    point_colors: Option<&[String]>,
     point_size: f64,
     seed: u64,
     fill_opacity: Option<f64>,
-    stroke: Option<Color>,
     stroke_width: Option<f64>,
     scene: &mut Scene,
     computed: &ComputedLayout,
 ) {
-    let make_circle = |cx: f64, cy: f64| Primitive::Circle {
-        cx, cy, r: point_size,
-        fill: color.into(),
-        fill_opacity,
-        stroke: stroke.clone(),
-        stroke_width,
+    // Resolve the fill color for point index `j`, falling back to the group color.
+    let resolve_color = |j: usize| -> &str {
+        point_colors
+            .and_then(|c| c.get(j).map(|s| s.as_str()))
+            .unwrap_or(color)
+    };
+    let make_circle = |j: usize, cx: f64, cy: f64| -> Primitive {
+        let fill_color = resolve_color(j);
+        let stroke = stroke_width.map(|_| Color::from(fill_color));
+        Primitive::Circle {
+            cx, cy, r: point_size,
+            fill: fill_color.into(),
+            fill_opacity,
+            stroke,
+            stroke_width,
+        }
     };
     match style {
         StripStyle::Center => {
             let cx = computed.map_x(x_center_data);
-            for &v in values {
-                scene.add(make_circle(cx, computed.map_y(v)));
+            for (j, &v) in values.iter().enumerate() {
+                scene.add(make_circle(j, cx, computed.map_y(v)));
             }
         }
         StripStyle::Strip { jitter } => {
@@ -1457,23 +1467,23 @@ fn add_strip_points(
             // as the seeded SmallRng it replaces. XOR with golden-ratio constant so
             // seed=0 doesn't produce an all-zero state.
             let mut rng_state = seed ^ 0x9e3779b97f4a7c15u64;
-            for &v in values {
+            for (j, &v) in values.iter().enumerate() {
                 rng_state ^= rng_state << 13;
                 rng_state ^= rng_state >> 7;
                 rng_state ^= rng_state << 17;
                 let rand_val = (rng_state >> 11) as f64 * (1.0 / (1u64 << 53) as f64);
                 let offset: f64 = (rand_val - 0.5) * jitter;
                 let cx = computed.map_x(x_center_data + offset);
-                scene.add(make_circle(cx, computed.map_y(v)));
+                scene.add(make_circle(j, cx, computed.map_y(v)));
             }
         }
         StripStyle::Swarm => {
             let y_screen: Vec<f64> = values.iter().map(|&v| computed.map_y(v)).collect();
             let x_offsets = render_utils::beeswarm_positions(&y_screen, point_size);
             let cx_center = computed.map_x(x_center_data);
-            for (i, &v) in values.iter().enumerate() {
-                let cx = cx_center + x_offsets[i];
-                scene.add(make_circle(cx, computed.map_y(v)));
+            for (j, &v) in values.iter().enumerate() {
+                let cx = cx_center + x_offsets[j];
+                scene.add(make_circle(j, cx, computed.map_y(v)));
             }
         }
     }
@@ -1484,16 +1494,15 @@ fn add_strip(strip: &StripPlot, scene: &mut Scene, computed: &ComputedLayout) {
         let color = strip.group_colors.as_ref()
             .and_then(|c| c.get(i).map(|s| s.as_str()))
             .unwrap_or(&strip.color);
-        let stroke = strip.marker_stroke_width.map(|_| Color::from(color));
         add_strip_points(
             &group.values,
             (i + 1) as f64,
             &strip.style,
             color,
+            group.point_colors.as_deref(),
             strip.point_size,
             strip.seed.wrapping_add(i as u64),
             strip.marker_opacity,
-            stroke,
             strip.marker_stroke_width,
             scene,
             computed,
