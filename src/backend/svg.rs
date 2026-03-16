@@ -106,11 +106,16 @@ impl SvgBackend {
             write_newline(&mut svg, p);
         }
 
-        if !scene.defs.is_empty() {
+        if !scene.defs.is_empty() || scene.has_tooltips {
             write_indent(&mut svg, 1, p);
             svg.push_str("<defs>");
             for d in &scene.defs {
                 svg.push_str(d);
+            }
+            if scene.has_tooltips {
+                svg.push_str(
+                    r#"<style>g.tt{cursor:pointer;}g.tt:hover>*{opacity:0.75;}</style>"#,
+                );
             }
             svg.push_str("</defs>");
             write_newline(&mut svg, p);
@@ -233,9 +238,12 @@ impl SvgBackend {
                     svg.push_str(" />");
                     write_newline(&mut svg, p);
                 }
-                Primitive::GroupStart { transform } => {
+                Primitive::GroupStart { transform, title } => {
                     write_indent(&mut svg, depth, p);
                     svg.push_str("<g");
+                    if title.is_some() {
+                        svg.push_str(r#" class="tt""#);
+                    }
                     if let Some(t) = transform {
                         svg.push_str(r#" transform=""#);
                         svg.push_str(t);
@@ -244,6 +252,13 @@ impl SvgBackend {
                     svg.push('>');
                     write_newline(&mut svg, p);
                     depth += 1;
+                    if let Some(tip) = title {
+                        write_indent(&mut svg, depth, p);
+                        svg.push_str("<title>");
+                        write_escaped(&mut svg, tip);
+                        svg.push_str("</title>");
+                        write_newline(&mut svg, p);
+                    }
                 }
                 Primitive::GroupEnd => {
                     depth -= 1;

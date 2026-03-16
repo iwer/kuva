@@ -421,6 +421,7 @@ impl Figure {
                 }
                 master.add(Primitive::GroupStart {
                     transform: Some(format!("translate({cell_x},{cell_y})")),
+                    title: None,
                 });
                 for elem in cell_scene.elements {
                     master.add(elem);

@@ -108,6 +108,8 @@ pub struct ScatterPlot {
     pub marker_opacity: Option<f64>,
     /// Stroke (outline) width for markers. `None` = no stroke. Stroke color matches fill.
     pub marker_stroke_width: Option<f64>,
+    pub show_tooltips: bool,
+    pub tooltip_labels: Option<Vec<String>>,
 }
 
 
@@ -137,6 +139,8 @@ impl ScatterPlot {
             colors: None,
             marker_opacity: None,
             marker_stroke_width: None,
+            show_tooltips: false,
+            tooltip_labels: None,
         }
     }
 
@@ -406,6 +410,16 @@ impl ScatterPlot {
     /// points visible even in dense regions.
     pub fn with_marker_stroke_width(mut self, width: f64) -> Self {
         self.marker_stroke_width = Some(width);
+        self
+    }
+
+    pub fn with_tooltips(mut self) -> Self {
+        self.show_tooltips = true;
+        self
+    }
+
+    pub fn with_tooltip_labels(mut self, labels: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.tooltip_labels = Some(labels.into_iter().map(|s| s.into()).collect());
         self
     }
 }

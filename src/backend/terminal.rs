@@ -786,7 +786,7 @@ impl Canvas {
                 }
             }
 
-            Primitive::GroupStart { transform } => {
+            Primitive::GroupStart { transform, .. } => {
                 let offset = transform
                     .as_ref()
                     .map(|t| parse_translate(t))

@@ -79,6 +79,8 @@ pub struct PolarPlot {
     pub show_grid: bool,
     pub show_r_labels: bool,
     pub show_legend: bool,
+    pub show_tooltips: bool,
+    pub tooltip_labels: Option<Vec<String>>,
 }
 
 impl Default for PolarPlot {
@@ -93,6 +95,8 @@ impl Default for PolarPlot {
             show_grid: true,
             show_r_labels: true,
             show_legend: false,
+            show_tooltips: false,
+            tooltip_labels: None,
         }
     }
 }
@@ -245,5 +249,15 @@ impl PolarPlot {
             .flat_map(|s| s.r.iter())
             .cloned()
             .fold(0.0_f64, f64::max)
+    }
+
+    pub fn with_tooltips(mut self) -> Self {
+        self.show_tooltips = true;
+        self
+    }
+
+    pub fn with_tooltip_labels(mut self, labels: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        self.tooltip_labels = Some(labels.into_iter().map(|s| s.into()).collect());
+        self
     }
 }

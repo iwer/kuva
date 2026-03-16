@@ -251,8 +251,14 @@ impl Plot {
                     };
                     return Some(((x_min, x_max), (0.0, max_y)));
                 }
-                // Auto-binning path: requires explicit range
-                let range = h.range?;
+                // Auto-binning path: use explicit range if set, else derive from data
+                // (mirrors the fallback in the renderer so bounds() always returns a usable range)
+                let range = h.range.unwrap_or_else(|| {
+                    if h.data.is_empty() { return (0.0, 1.0); }
+                    let min = h.data.iter().cloned().fold(f64::INFINITY, f64::min);
+                    let max = h.data.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+                    (min, max)
+                });
                 let bins = h.bins;
                 let bin_width = (range.1 - range.0) / bins as f64;
 
