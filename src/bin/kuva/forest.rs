@@ -123,11 +123,14 @@ pub fn run(args: ForestArgs) -> Result<(), String> {
         plot = plot.with_cap_size(cs);
     }
 
-    for i in 0..labels.len() {
-        if let Some(ref w) = weights {
-            plot = plot.with_weighted_row(&labels[i], estimates[i], ci_lowers[i], ci_uppers[i], w[i]);
-        } else {
-            plot = plot.with_row(&labels[i], estimates[i], ci_lowers[i], ci_uppers[i]);
+    let rows = labels.iter().zip(estimates).zip(ci_lowers).zip(ci_uppers);
+    if let Some(w) = weights {
+        for ((((label, est), lo), hi), weight) in rows.zip(w) {
+            plot = plot.with_weighted_row(label.as_str(), est, lo, hi, weight);
+        }
+    } else {
+        for (((label, est), lo), hi) in rows {
+            plot = plot.with_row(label.as_str(), est, lo, hi);
         }
     }
 
