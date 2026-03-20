@@ -100,6 +100,10 @@ check "bar basic" \
     "$BIN" bar "$DATA/bar.tsv" --label-col category --value-col count \
         --title "Category Counts" --x-label "Category" --y-label "Count"
 
+check "bar count-by" \
+    "$BIN" bar "$DATA/scatter.tsv" --count-by group \
+        --title "Points per Group" --x-label "Group" --y-label "Count"
+
 # ── histogram ─────────────────────────────────────────────────────────────────
 check "histogram basic" \
     "$BIN" histogram "$DATA/histogram.tsv" --value-col value \
@@ -158,6 +162,10 @@ check "pie basic" \
     "$BIN" pie "$DATA/pie.tsv" --label-col feature --value-col percentage \
         --title "Genome Composition"
 
+check "pie count-by" \
+    "$BIN" pie "$DATA/scatter.tsv" --count-by group --percent --legend \
+        --title "Group Proportions"
+
 check "pie donut percent" \
     "$BIN" pie "$DATA/pie.tsv" --label-col feature --value-col percentage --donut --percent --legend \
         --title "Genome Composition"
@@ -213,6 +221,10 @@ check "volcano top-n legend" \
     "$BIN" volcano "$DATA/volcano.tsv" --name-col gene --x-col log2fc --y-col pvalue --top-n 10 --legend \
         --title "Differential Expression" --x-label "log2 Fold Change" "--y-label=-log10(p-value)"
 
+check "volcano pvalue-col-is-log" \
+    "$BIN" volcano "$DATA/volcano_logp.tsv" --name-col gene --x-col log2fc --y-col neg_log10_pvalue --pvalue-col-is-log \
+        --title "Differential Expression (log p input)" --x-label "log2 Fold Change" "--y-label=-log10(p-value)"
+
 # ── manhattan ─────────────────────────────────────────────────────────────────
 check "manhattan sequential" \
     "$BIN" manhattan "$DATA/gene_stats.tsv" --chr-col chr --pvalue-col pvalue \
@@ -225,6 +237,10 @@ check "manhattan top-n" \
 check "manhattan hg38" \
     "$BIN" manhattan "$DATA/gene_stats.tsv" --chr-col chr --pos-col pos --pvalue-col pvalue --genome-build hg38 \
         --title "GWAS Results (hg38)" --x-label "Chromosome" "--y-label=-log10(p-value)"
+
+check "manhattan pvalue-col-is-log" \
+    "$BIN" manhattan "$DATA/gene_stats_logp.tsv" --chr-col chr --pvalue-col neg_log10_pvalue --pvalue-col-is-log \
+        --title "GWAS Results (log p input)" --x-label "Chromosome" "--y-label=-log10(p-value)"
 
 # ── candlestick ───────────────────────────────────────────────────────────────
 check "candlestick basic" \

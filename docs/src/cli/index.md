@@ -234,6 +234,7 @@ Bar chart from label/value pairs.
 |---|---|---|
 | `--label-col <COL>` | `0` | Label column |
 | `--value-col <COL>` | `1` | Value column |
+| `--count-by <COL>` | — | Count occurrences per unique value in this column (ignores `--value-col`) |
 | `--color <CSS>` | `steelblue` | Bar fill color |
 | `--bar-width <F>` | `0.8` | Bar width as a fraction of the slot |
 
@@ -242,6 +243,9 @@ kuva bar bar.tsv --label-col category --value-col count --color "#4682b4"
 
 kuva bar bar.tsv --x-label "Pathway" --y-label "Gene count" \
     -o pathways.svg
+
+# count occurrences of each group
+kuva bar scatter.tsv --count-by group --y-label "Count"
 ```
 
 ---
@@ -380,6 +384,7 @@ Pie or donut chart.
 |---|---|---|
 | `--label-col <COL>` | `0` | Label column |
 | `--value-col <COL>` | `1` | Value column |
+| `--count-by <COL>` | — | Count occurrences per unique value in this column (ignores `--value-col`) |
 | `--color-col <COL>` | — | Optional CSS color column |
 | `--donut` | off | Render as a donut (hollow center) |
 | `--inner-radius <PX>` | `80` | Donut hole radius in pixels |
@@ -392,6 +397,9 @@ kuva pie pie.tsv --label-col feature --value-col percentage --percent
 
 kuva pie pie.tsv --label-col feature --value-col percentage \
     --donut --legend --label-position outside
+
+# count occurrences of each group
+kuva pie scatter.tsv --count-by group --percent --legend
 ```
 
 ---
@@ -516,6 +524,7 @@ Volcano plot for differential expression results.
 | `--name-col <COL>` | `0` | Gene/feature name column |
 | `--x-col <COL>` | `1` | log₂FC column |
 | `--y-col <COL>` | `2` | p-value column (raw, not −log₁₀) |
+| `--pvalue-col-is-log` | off | p-value column already contains −log₁₀(p); un-transform before plotting |
 | `--fc-cutoff <F>` | `1.0` | \|log₂FC\| threshold |
 | `--p-cutoff <F>` | `0.05` | p-value significance threshold |
 | `--top-n <N>` | `0` | Label the N most-significant points |
@@ -533,6 +542,10 @@ kuva volcano gene_stats.tsv \
 kuva volcano gene_stats.tsv \
     --name-col gene --x-col log2fc --y-col pvalue \
     --fc-cutoff 2.0 --p-cutoff 0.01 --top-n 10
+
+# when p-value column already holds -log10(p)
+kuva volcano results.tsv --name-col gene --x-col log2fc --y-col neg_log10_p \
+    --pvalue-col-is-log
 ```
 
 ---
@@ -552,6 +565,7 @@ Two layout modes:
 | `--chr-col <COL>` | `0` | Chromosome column |
 | `--pos-col <COL>` | `1` | Base-pair position column (bp mode only) |
 | `--pvalue-col <COL>` | `2` | p-value column |
+| `--pvalue-col-is-log` | off | p-value column already contains −log₁₀(p); un-transform before plotting |
 | `--genome-build <BUILD>` | — | Enable bp mode: `hg19`, `hg38`, or `t2t` |
 | `--genome-wide <F>` | `7.301` | Genome-wide threshold (−log₁₀ scale) |
 | `--suggestive <F>` | `5.0` | Suggestive threshold (−log₁₀ scale) |
@@ -569,6 +583,9 @@ kuva manhattan gene_stats.tsv --chr-col chr --pvalue-col pvalue --top-n 5
 kuva manhattan gwas.tsv \
     --chr-col chr --pos-col pos --pvalue-col pvalue \
     --genome-build hg38 --top-n 10 --legend
+
+# when p-value column already holds -log10(p)
+kuva manhattan gwas.tsv --chr-col chr --pvalue-col neg_log10_p --pvalue-col-is-log
 ```
 
 ---

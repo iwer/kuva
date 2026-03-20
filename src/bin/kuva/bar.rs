@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use clap::Args;
 
 use kuva::plot::bar::BarPlot;
@@ -19,6 +21,10 @@ pub struct BarArgs {
     /// Value column (0-based index or header name; default: 1).
     #[arg(long)]
     pub value_col: Option<ColSpec>,
+
+    /// Count occurrences of each unique value in this column (ignores --value-col).
+    #[arg(long)]
+    pub count_by: Option<ColSpec>,
 
     /// Bar fill color (CSS string; default: "steelblue").
     #[arg(long)]
@@ -44,14 +50,22 @@ pub fn run(args: BarArgs) -> Result<(), String> {
         args.input.delimiter,
     )?;
 
-    let label_col = args.label_col.unwrap_or(ColSpec::Index(0));
-    let value_col = args.value_col.unwrap_or(ColSpec::Index(1));
     let color = args.color.unwrap_or_else(|| "steelblue".to_string());
 
-    let labels = table.col_str(&label_col)?;
-    let values = table.col_f64(&value_col)?;
-
-    let pairs: Vec<(String, f64)> = labels.into_iter().zip(values).collect();
+    let pairs: Vec<(String, f64)> = if let Some(ref count_col) = args.count_by {
+        let values = table.col_str(count_col)?;
+        let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+        for v in values {
+            *counts.entry(v).or_insert(0) += 1;
+        }
+        counts.into_iter().map(|(k, c)| (k, c as f64)).collect()
+    } else {
+        let label_col = args.label_col.unwrap_or(ColSpec::Index(0));
+        let value_col = args.value_col.unwrap_or(ColSpec::Index(1));
+        let labels = table.col_str(&label_col)?;
+        let values = table.col_f64(&value_col)?;
+        labels.into_iter().zip(values).collect()
+    };
 
     let mut plot = BarPlot::new()
         .with_bars(pairs)
