@@ -43,7 +43,9 @@ fn generate_svg(wad: &[u8], wasm: &[u8], doom_js: &str) -> String {
 
     // Escape any </script> occurrences in the Emscripten glue so they don't
     // terminate the enclosing <script> tag prematurely.
-    let doom_js_safe = doom_js.replace("</script", "<\\/script");
+    let doom_js_safe = doom_js
+        .replace("</script", "<\\/script")
+        .replace("]]>", "]] >");  // prevent premature CDATA close
 
     // Capacity estimate: base64 + JS + ~2 KB template.
     let cap = wad_b64.len() + wasm_b64.len() + doom_js_safe.len() + 2048;
@@ -54,15 +56,15 @@ fn generate_svg(wad: &[u8], wasm: &[u8], doom_js: &str) -> String {
         "<!-- Engine: Chocolate Doom (GPL v2, github.com/cloudflare/doom-wasm).\n",
         "     WAD: DOOM shareware \u{00a9} id Software / ZeniMax Media.\n",
         "     Free redistribution permitted under original shareware terms. -->\n",
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"640\" height=\"400\" viewBox=\"0 0 640 400\">\n",
-        "  <rect width=\"640\" height=\"400\" fill=\"#000\"/>\n",
-        "  <foreignObject x=\"0\" y=\"0\" width=\"640\" height=\"400\">\n",
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"600\" viewBox=\"0 0 800 600\">\n",
+        "  <rect width=\"800\" height=\"600\" fill=\"#000\"/>\n",
+        "  <foreignObject x=\"0\" y=\"0\" width=\"800\" height=\"600\">\n",
         "    <body xmlns=\"http://www.w3.org/1999/xhtml\"\n",
         "          style=\"margin:0;padding:0;background:#000;overflow:hidden\">\n",
-        "      <canvas id=\"doom-canvas\" width=\"640\" height=\"400\" tabindex=\"-1\"\n",
+        "      <canvas id=\"doom-canvas\" width=\"800\" height=\"600\" tabindex=\"-1\"\n",
         "              oncontextmenu=\"event.preventDefault()\"\n",
-        "              style=\"display:block;width:640px;height:400px;\"/>\n",
-        "      <script type=\"text/javascript\">\n",
+        "              style=\"display:block;width:800px;height:600px;\"/>\n",
+        "      <script type=\"text/javascript\">//<![CDATA[\n",
         "function _b64(s){var b=atob(s),a=new Uint8Array(b.length);\n",
         "  for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}\n",
         "var _WAD='",
@@ -77,10 +79,10 @@ fn generate_svg(wad: &[u8], wasm: &[u8], doom_js: &str) -> String {
         "  canvas:document.getElementById('doom-canvas'),\n",
         "  noInitialRun:true,\n",
         "  preRun:[function(){\n",
-        "    FS.writeFile('/doom1.wad',_b64(_WAD));\n",
+        "    FS.writeFile('doom1.wad',_b64(_WAD));\n",
         "  }],\n",
         "  onRuntimeInitialized:function(){\n",
-        "    Module.callMain(['-iwad','/doom1.wad','-nomusic']);\n",
+        "    callMain(['-iwad','doom1.wad','-window','-nogui','-nomusic']);\n",
         "    document.getElementById('doom-canvas').focus();\n",
         "  },\n",
         "  print:function(){},\n",
@@ -89,7 +91,7 @@ fn generate_svg(wad: &[u8], wasm: &[u8], doom_js: &str) -> String {
     ));
     s.push_str(&doom_js_safe);
     s.push_str(concat!(
-        "\n      </script>\n",
+        "\n//]]>\n      </script>\n",
         "    </body>\n",
         "  </foreignObject>\n",
         "</svg>\n",

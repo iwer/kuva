@@ -81,3 +81,7 @@
 # Performance
 
 - [Benchmarks](./benchmarks.md)
+
+# Easter Egg
+
+- [DOOM](./doom.md)
