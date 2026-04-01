@@ -658,6 +658,17 @@ fn add_scatter(scatter: &ScatterPlot, scene: &mut Scene, computed: &ComputedLayo
 }
 
 fn add_line(line: &LinePlot, scene: &mut Scene, computed: &ComputedLayout) {
+    // In interactive mode, wrap the entire series so legend toggle can mute it.
+    let interactive_group = computed.interactive && line.legend_label.is_some();
+    if interactive_group {
+        let group = line.legend_label.as_deref().unwrap_or("");
+        scene.add(Primitive::GroupStart {
+            transform: None,
+            title: None,
+            extra_attrs: Some(format!("class=\"tt\" data-group=\"{}\"", group)),
+        });
+    }
+
     // Draw band behind line if present
     if let Some(ref band) = line.band {
         add_band(band, scene, computed);
@@ -745,6 +756,8 @@ fn add_line(line: &LinePlot, scene: &mut Scene, computed: &ComputedLayout) {
             });
         }
     }
+
+    if interactive_group { scene.add(Primitive::GroupEnd); }
 }
 
 fn add_series(series: &SeriesPlot, scene: &mut Scene, computed: &ComputedLayout) {
@@ -1641,17 +1654,25 @@ fn add_strip_points(
         }
     };
     let tooltip_labels_opt: Option<Vec<String>> = tooltip_labels.map(|s| s.to_vec());
+    let strip_extra = |v: f64| -> Option<String> {
+        if computed.interactive {
+            Some(format!("class=\"tt\" data-group=\"{}\" data-y=\"{v}\"", group_label))
+        } else {
+            None
+        }
+    };
     match style {
         StripStyle::Center => {
             let cx = computed.map_x(x_center_data);
             for (j, &v) in values.iter().enumerate() {
-                let tip = tooltip(show_tooltips, &tooltip_labels_opt, label_offset + j,
+                let tip = tooltip(show_tooltips || computed.interactive, &tooltip_labels_opt, label_offset + j,
                     || format!("{}: {:.2}", group_label, v));
-                if let Some(ref t) = tip {
-                    scene.add(Primitive::GroupStart { transform: None, title: Some(t.clone()), extra_attrs: None });
+                let extra = strip_extra(v);
+                if tip.is_some() || extra.is_some() {
+                    scene.add(Primitive::GroupStart { transform: None, title: tip.clone(), extra_attrs: extra });
                 }
                 scene.add(make_circle(j, cx, computed.map_y(v)));
-                if tip.is_some() { scene.add(Primitive::GroupEnd); }
+                if tip.is_some() || computed.interactive { scene.add(Primitive::GroupEnd); }
             }
         }
         StripStyle::Strip { jitter } => {
@@ -1666,13 +1687,14 @@ fn add_strip_points(
                 let rand_val = (rng_state >> 11) as f64 * (1.0 / (1u64 << 53) as f64);
                 let offset: f64 = (rand_val - 0.5) * jitter;
                 let cx = computed.map_x(x_center_data + offset);
-                let tip = tooltip(show_tooltips, &tooltip_labels_opt, label_offset + j,
+                let tip = tooltip(show_tooltips || computed.interactive, &tooltip_labels_opt, label_offset + j,
                     || format!("{}: {:.2}", group_label, v));
-                if let Some(ref t) = tip {
-                    scene.add(Primitive::GroupStart { transform: None, title: Some(t.clone()), extra_attrs: None });
+                let extra = strip_extra(v);
+                if tip.is_some() || extra.is_some() {
+                    scene.add(Primitive::GroupStart { transform: None, title: tip.clone(), extra_attrs: extra });
                 }
                 scene.add(make_circle(j, cx, computed.map_y(v)));
-                if tip.is_some() { scene.add(Primitive::GroupEnd); }
+                if tip.is_some() || computed.interactive { scene.add(Primitive::GroupEnd); }
             }
         }
         StripStyle::Swarm => {
@@ -1681,13 +1703,14 @@ fn add_strip_points(
             let cx_center = computed.map_x(x_center_data);
             for (j, &v) in values.iter().enumerate() {
                 let cx = cx_center + x_offsets[j];
-                let tip = tooltip(show_tooltips, &tooltip_labels_opt, label_offset + j,
+                let tip = tooltip(show_tooltips || computed.interactive, &tooltip_labels_opt, label_offset + j,
                     || format!("{}: {:.2}", group_label, v));
-                if let Some(ref t) = tip {
-                    scene.add(Primitive::GroupStart { transform: None, title: Some(t.clone()), extra_attrs: None });
+                let extra = strip_extra(v);
+                if tip.is_some() || extra.is_some() {
+                    scene.add(Primitive::GroupStart { transform: None, title: tip.clone(), extra_attrs: extra });
                 }
                 scene.add(make_circle(j, cx, computed.map_y(v)));
-                if tip.is_some() { scene.add(Primitive::GroupEnd); }
+                if tip.is_some() || computed.interactive { scene.add(Primitive::GroupEnd); }
             }
         }
     }
@@ -3436,13 +3459,28 @@ pub fn collect_legend_entries(plots: &[Plot]) -> Vec<LegendEntry> {
                 }
             }
             Plot::Strip(sp) => {
-                if let Some(ref label) = sp.legend_label {
-                    entries.push(LegendEntry {
-                        label: label.clone(),
-                        color: sp.color.clone(),
-                        shape: LegendShape::Circle,
-                        dasharray: None,
-                    });
+                if sp.legend_label.is_some() {
+                    if let Some(ref colors) = sp.group_colors {
+                        // Per-group legend entries
+                        for (i, group) in sp.groups.iter().enumerate() {
+                            let color = colors.get(i).cloned().unwrap_or_else(|| sp.color.clone());
+                            entries.push(LegendEntry {
+                                label: group.label.clone(),
+                                color,
+                                shape: LegendShape::Circle,
+                                dasharray: None,
+                            });
+                        }
+                    } else if let Some(ref label) = sp.legend_label {
+                        if !label.is_empty() {
+                            entries.push(LegendEntry {
+                                label: label.clone(),
+                                color: sp.color.clone(),
+                                shape: LegendShape::Circle,
+                                dasharray: None,
+                            });
+                        }
+                    }
                 }
             }
             Plot::Heatmap(heatmap) => {
