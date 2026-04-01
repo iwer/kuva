@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`BrickPlot` bounds fix with offsets** — x-axis range is now computed per-row using actual row widths and offsets in both DNA and strigar modes, preventing reads from being clipped at the right edge when start positions push them beyond the widest unshifted row.
 
 ### Fixed
+- **Manhattan chromosome labels not visible** — labels were previously emitted inside the SVG clip-path group, placing them below the clip boundary (the data area) and making them invisible. Labels are now drawn after `ClipEnd` so they render outside the clip region.
 - **Multi-panel figure axis ranges** — manually set `with_x_axis_min/max` / `with_y_axis_min/max` values were silently dropped when used inside `Figure` panels. Now correctly forwarded through `clone_layout`. Closes #43.
 - **Terminal y-axis label** — `--y-label` text is now rendered vertically (one character per row) in `--terminal` mode instead of horizontally, preventing overlap with the plot area.
 - **Terminal legend swatches** — circle-based legend swatches (scatter, density, volcano, manhattan, etc.) now show their actual series color instead of being masked by the legend background in `--terminal` mode.
