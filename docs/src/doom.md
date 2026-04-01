@@ -4,7 +4,22 @@ kuva generates scientific plots. It also generates a fully self-contained, playa
 
 The file below is a single `.svg`. No server, no network requests, no external dependencies. Open it in any browser and play. Everything (engine, game data, all ~15 MB of it) is embedded inside.
 
-<iframe src="doom.svg" width="800" height="600" style="border:none;display:block;margin:0 auto;"></iframe>
+<div id="doom-container" style="width:100%;max-width:800px;margin:0 auto;overflow:hidden;">
+<iframe src="doom.svg" id="doom-frame" width="800" height="600" scrolling="no" style="border:none;display:block;transform-origin:top left;"></iframe>
+</div>
+<script>
+(function(){
+  var c = document.getElementById('doom-container');
+  var f = document.getElementById('doom-frame');
+  function scale(){
+    var s = Math.min(1, c.clientWidth / 800);
+    f.style.transform = 'scale(' + s + ')';
+    c.style.height = Math.round(600 * s) + 'px';
+  }
+  scale();
+  window.addEventListener('resize', scale);
+})();
+</script>
 
 *Click the game to focus it, then use arrow keys or WASD to move, Ctrl to shoot, Space to open doors, Enter to start.*
 
