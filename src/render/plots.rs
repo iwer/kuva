@@ -564,22 +564,34 @@ impl Plot {
                     bp.sequences.iter().map(|s| s.len()).max().unwrap_or(0) as f64
                 };
 
-                // Strigar mode: always start at 0 (comparing repeat lengths directly).
-                // DNA mode with per-row offsets: find the true x extent across all rows.
-                let (x_min, x_max) = if bp.strigar_exp.is_some() {
-                    (0.0, max_width)
-                } else if let Some(ref offsets) = bp.x_offsets {
-                    let seqs = &bp.sequences;
+                // Compute the true x extent across all rows, accounting for per-row offsets.
+                let row_width = |i: usize| -> f64 {
+                    if let Some(ref exp) = bp.strigar_exp {
+                        if let Some(ref ml) = bp.motif_lengths {
+                            exp.get(i).map(|s| {
+                                s.chars().map(|c| *ml.get(&c).unwrap_or(&1) as f64).sum::<f64>()
+                            }).unwrap_or(0.0)
+                        } else {
+                            exp.get(i).map(|s| s.len() as f64).unwrap_or(0.0)
+                        }
+                    } else {
+                        bp.sequences.get(i).map(|s| s.len() as f64).unwrap_or(0.0)
+                    }
+                };
+                let n_rows = if bp.strigar_exp.is_some() { bp.strigar_exp.as_ref().map_or(0, |e| e.len()) } else { bp.sequences.len() };
+                let (x_min, x_max) = if let Some(ref offsets) = bp.x_offsets {
                     let mut lo = f64::INFINITY;
                     let mut hi = f64::NEG_INFINITY;
-                    for (i, seq) in seqs.iter().enumerate() {
-                        let off = offsets.get(i).copied().flatten().unwrap_or(bp.x_offset);
+                    for i in 0..n_rows {
+                        let off = offsets.get(i).copied().flatten().unwrap_or(bp.x_offset)
+                            + bp.x_origin;
                         lo = lo.min(0.0 - off);
-                        hi = hi.max(seq.len() as f64 - off);
+                        hi = hi.max(row_width(i) - off);
                     }
                     (lo, hi)
                 } else {
-                    (0.0 - bp.x_offset, max_width - bp.x_offset)
+                    let off = bp.x_offset + bp.x_origin;
+                    (0.0 - off, max_width - off)
                 };
                 Some(((x_min, x_max), (0.0, rows as f64)))
             }

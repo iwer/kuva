@@ -1562,16 +1562,15 @@ fn add_brickplot(brickplot: &BrickPlot, scene: &mut Scene, computed: &ComputedLa
 
     let has_variable_width = brickplot.motif_lengths.is_some();
     // Resolve the offset for a given row index.
-    // Strigar mode always uses 0; DNA mode uses the per-row value if available,
-    // otherwise falls back to the global x_offset.
+    // Uses per-row offset if set, otherwise falls back to global x_offset.
+    // x_origin is added so that the chosen reference coordinate maps to x=0.
     let row_offset = |i: usize| -> f64 {
-        if brickplot.strigar_exp.is_some() {
-            0.0
-        } else if let Some(ref offsets) = brickplot.x_offsets {
+        let per_row = if let Some(ref offsets) = brickplot.x_offsets {
             offsets.get(i).copied().flatten().unwrap_or(brickplot.x_offset)
         } else {
             brickplot.x_offset
-        }
+        };
+        per_row + brickplot.x_origin
     };
 
     for (i, row) in rows.iter().enumerate() {
