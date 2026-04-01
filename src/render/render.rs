@@ -826,16 +826,24 @@ fn add_bar(bar: &BarPlot, scene: &mut Scene, computed: &ComputedLayout) {
 
         if bar.stacked {
             let mut y_accum = 0.0;
-            for bar_val in &group.bars {
+            for (j, bar_val) in group.bars.iter().enumerate() {
                 let x0 = computed.map_x(group_x - total_width / 2.0);
                 let x1 = computed.map_x(group_x + total_width / 2.0);
                 let y0 = computed.map_y(y_accum);
                 let y1 = computed.map_y(y_accum + bar_val.value);
 
-                let tip = tooltip(bar.show_tooltips, &bar.tooltip_labels, flat_i,
-                    || format!("{}: {:.2}", group.label, bar_val.value));
-                if let Some(ref t) = tip {
-                    scene.add(Primitive::GroupStart { transform: None, title: Some(t.clone()), extra_attrs: None });
+                let series_label = bar.legend_label.as_ref()
+                    .and_then(|ll| ll.get(j))
+                    .map(|s| s.as_str())
+                    .unwrap_or(&group.label);
+                let tip = tooltip(bar.show_tooltips || computed.interactive, &bar.tooltip_labels, flat_i,
+                    || format!("{} {}: {:.2}", group.label, series_label, bar_val.value));
+                let extra = if computed.interactive {
+                    Some(format!("class=\"tt\" data-group=\"{}\" data-x=\"{}\" data-y=\"{:.4}\"",
+                        series_label, group.label, bar_val.value))
+                } else { None };
+                if tip.is_some() || extra.is_some() {
+                    scene.add(Primitive::GroupStart { transform: None, title: tip, extra_attrs: extra });
                 }
                 scene.add(Primitive::Rect {
                     x: x0,
@@ -847,7 +855,7 @@ fn add_bar(bar: &BarPlot, scene: &mut Scene, computed: &ComputedLayout) {
                     stroke_width: None,
                     opacity: None,
                 });
-                if tip.is_some() { scene.add(Primitive::GroupEnd); }
+                if bar.show_tooltips || computed.interactive { scene.add(Primitive::GroupEnd); }
 
                 y_accum += bar_val.value;
                 flat_i += 1;
@@ -863,10 +871,24 @@ fn add_bar(bar: &BarPlot, scene: &mut Scene, computed: &ComputedLayout) {
                 let y0 = computed.map_y(0.0);
                 let y1 = computed.map_y(bar_val.value);
 
-                let tip = tooltip(bar.show_tooltips, &bar.tooltip_labels, flat_i,
-                    || format!("{}: {:.2}", group.label, bar_val.value));
-                if let Some(ref t) = tip {
-                    scene.add(Primitive::GroupStart { transform: None, title: Some(t.clone()), extra_attrs: None });
+                // In simple mode (1 bar per group), identify by the group's own label.
+                // In grouped mode (n>1 bars per group), identify by the series legend label.
+                let series_label = if n == 1 {
+                    group.label.as_str()
+                } else {
+                    bar.legend_label.as_ref()
+                        .and_then(|ll| ll.get(j))
+                        .map(|s| s.as_str())
+                        .unwrap_or(&group.label)
+                };
+                let tip = tooltip(bar.show_tooltips || computed.interactive, &bar.tooltip_labels, flat_i,
+                    || format!("{} {}: {:.2}", group.label, series_label, bar_val.value));
+                let extra = if computed.interactive {
+                    Some(format!("class=\"tt\" data-group=\"{}\" data-x=\"{}\" data-y=\"{:.4}\"",
+                        series_label, group.label, bar_val.value))
+                } else { None };
+                if tip.is_some() || extra.is_some() {
+                    scene.add(Primitive::GroupStart { transform: None, title: tip, extra_attrs: extra });
                 }
                 scene.add(Primitive::Rect {
                     x: x0,
@@ -878,7 +900,7 @@ fn add_bar(bar: &BarPlot, scene: &mut Scene, computed: &ComputedLayout) {
                     stroke_width: None,
                     opacity: None,
                 });
-                if tip.is_some() { scene.add(Primitive::GroupEnd); }
+                if bar.show_tooltips || computed.interactive { scene.add(Primitive::GroupEnd); }
                 flat_i += 1;
             }
         }
